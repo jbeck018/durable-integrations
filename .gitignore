@@ -1,0 +1,60 @@
+# Binaries
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Build artifacts
+dist/
+gen/
+
+# Test
+*.test
+*.out
+coverage.html
+coverage.txt
+
+# Go
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Node
+ui/node_modules/
+ui/dist/
+ui/.vite/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Docker
+.docker/
+
+# Secrets
+*.pem
+*.key
+credentials.json
+service-account.json

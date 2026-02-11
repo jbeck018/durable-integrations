@@ -1,0 +1,330 @@
+syntax = "proto3";
+
+package flowforge.api.v1;
+
+option go_package = "github.com/flowforge/flowforge/proto/flowforge/api/v1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/empty.proto";
+
+// FlowForge API service — manages connectors, connections, syncs, and schemas.
+service FlowForgeService {
+  // Connector operations
+  rpc ListConnectors(ListConnectorsRequest) returns (ListConnectorsResponse);
+  rpc GetConnector(GetConnectorRequest) returns (Connector);
+  rpc TestConnection(TestConnectionRequest) returns (TestConnectionResponse);
+
+  // Connection operations
+  rpc CreateConnection(CreateConnectionRequest) returns (Connection);
+  rpc GetConnection(GetConnectionRequest) returns (Connection);
+  rpc ListConnections(ListConnectionsRequest) returns (ListConnectionsResponse);
+  rpc UpdateConnection(UpdateConnectionRequest) returns (Connection);
+  rpc DeleteConnection(DeleteConnectionRequest) returns (google.protobuf.Empty);
+
+  // Sync operations
+  rpc CreateSync(CreateSyncRequest) returns (Sync);
+  rpc GetSync(GetSyncRequest) returns (Sync);
+  rpc ListSyncs(ListSyncsRequest) returns (ListSyncsResponse);
+  rpc UpdateSync(UpdateSyncRequest) returns (Sync);
+  rpc DeleteSync(DeleteSyncRequest) returns (google.protobuf.Empty);
+  rpc TriggerSync(TriggerSyncRequest) returns (SyncRun);
+  rpc PauseSync(PauseSyncRequest) returns (google.protobuf.Empty);
+  rpc ResumeSync(ResumeSyncRequest) returns (google.protobuf.Empty);
+
+  // Sync run operations
+  rpc GetSyncRun(GetSyncRunRequest) returns (SyncRun);
+  rpc ListSyncRuns(ListSyncRunsRequest) returns (ListSyncRunsResponse);
+
+  // Stream operations
+  rpc DiscoverStreams(DiscoverStreamsRequest) returns (DiscoverStreamsResponse);
+  rpc ListStreams(ListStreamsRequest) returns (ListStreamsResponse);
+
+  // Schema operations
+  rpc GetSchemaVersions(GetSchemaVersionsRequest) returns (GetSchemaVersionsResponse);
+  rpc CompareSchemas(CompareSchemasRequest) returns (CompareSchemasResponse);
+
+  // Field mapping operations
+  rpc CreateFieldMapping(CreateFieldMappingRequest) returns (FieldMapping);
+  rpc GetFieldMapping(GetFieldMappingRequest) returns (FieldMapping);
+  rpc UpdateFieldMapping(UpdateFieldMappingRequest) returns (FieldMapping);
+  rpc AutoMapFields(AutoMapFieldsRequest) returns (AutoMapFieldsResponse);
+}
+
+// ─── Connector ─────────────────────────────────────────────
+
+message Connector {
+  string name = 1;
+  string display_name = 2;
+  string version = 3;
+  string type = 4;  // source, destination, bidirectional
+  string category = 5;
+  string icon = 6;
+}
+
+message ListConnectorsRequest {
+  string type_filter = 1;
+  string category_filter = 2;
+}
+
+message ListConnectorsResponse {
+  repeated Connector connectors = 1;
+}
+
+message GetConnectorRequest {
+  string name = 1;
+}
+
+message TestConnectionRequest {
+  string connector_name = 1;
+  google.protobuf.Struct config = 2;
+}
+
+message TestConnectionResponse {
+  string status = 1;
+  string message = 2;
+}
+
+// ─── Connection ────────────────────────────────────────────
+
+message Connection {
+  string id = 1;
+  string tenant_id = 2;
+  string connector_id = 3;
+  string name = 4;
+  string auth_type = 5;
+  string status = 6;
+  google.protobuf.Timestamp last_checked_at = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+message CreateConnectionRequest {
+  string connector_id = 1;
+  string name = 2;
+  string auth_type = 3;
+  google.protobuf.Struct config = 4;
+}
+
+message GetConnectionRequest {
+  string id = 1;
+}
+
+message ListConnectionsRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+}
+
+message ListConnectionsResponse {
+  repeated Connection connections = 1;
+  int32 total = 2;
+}
+
+message UpdateConnectionRequest {
+  string id = 1;
+  string name = 2;
+  google.protobuf.Struct config = 3;
+}
+
+message DeleteConnectionRequest {
+  string id = 1;
+}
+
+// ─── Sync ──────────────────────────────────────────────────
+
+message Sync {
+  string id = 1;
+  string tenant_id = 2;
+  string source_connection_id = 3;
+  string dest_connection_id = 4;
+  google.protobuf.Struct config = 5;
+  google.protobuf.Struct schedule = 6;
+  string status = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+message CreateSyncRequest {
+  string source_connection_id = 1;
+  string dest_connection_id = 2;
+  google.protobuf.Struct config = 3;
+  google.protobuf.Struct schedule = 4;
+}
+
+message GetSyncRequest {
+  string id = 1;
+}
+
+message ListSyncsRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+  string status_filter = 3;
+}
+
+message ListSyncsResponse {
+  repeated Sync syncs = 1;
+  int32 total = 2;
+}
+
+message UpdateSyncRequest {
+  string id = 1;
+  google.protobuf.Struct config = 2;
+  google.protobuf.Struct schedule = 3;
+}
+
+message DeleteSyncRequest {
+  string id = 1;
+}
+
+message TriggerSyncRequest {
+  string sync_id = 1;
+  bool full_refresh = 2;
+}
+
+message PauseSyncRequest {
+  string sync_id = 1;
+}
+
+message ResumeSyncRequest {
+  string sync_id = 1;
+}
+
+// ─── Sync Run ──────────────────────────────────────────────
+
+message SyncRun {
+  string id = 1;
+  string sync_id = 2;
+  string status = 3;
+  int64 records_extracted = 4;
+  int64 records_transformed = 5;
+  int64 records_loaded = 6;
+  repeated SyncError errors = 7;
+  google.protobuf.Timestamp started_at = 8;
+  google.protobuf.Timestamp completed_at = 9;
+}
+
+message SyncError {
+  string message = 1;
+  string phase = 2;
+  string stream = 3;
+  google.protobuf.Timestamp occurred_at = 4;
+}
+
+message GetSyncRunRequest {
+  string id = 1;
+}
+
+message ListSyncRunsRequest {
+  string sync_id = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+}
+
+message ListSyncRunsResponse {
+  repeated SyncRun runs = 1;
+  int32 total = 2;
+}
+
+// ─── Stream ────────────────────────────────────────────────
+
+message DiscoverStreamsRequest {
+  string connection_id = 1;
+}
+
+message DiscoverStreamsResponse {
+  repeated StreamInfo streams = 1;
+}
+
+message StreamInfo {
+  string name = 1;
+  string namespace = 2;
+  google.protobuf.Struct schema = 3;
+  repeated string supported_sync_modes = 4;
+}
+
+message ListStreamsRequest {
+  string connection_id = 1;
+}
+
+message ListStreamsResponse {
+  repeated StreamInfo streams = 1;
+}
+
+// ─── Schema ────────────────────────────────────────────────
+
+message GetSchemaVersionsRequest {
+  string stream_id = 1;
+}
+
+message GetSchemaVersionsResponse {
+  repeated SchemaVersion versions = 1;
+}
+
+message SchemaVersion {
+  int32 version = 1;
+  google.protobuf.Struct schema = 2;
+  google.protobuf.Timestamp created_at = 3;
+}
+
+message CompareSchemasRequest {
+  string stream_id = 1;
+  int32 version_a = 2;
+  int32 version_b = 3;
+}
+
+message CompareSchemasResponse {
+  repeated SchemaChangeDetail changes = 1;
+  bool is_compatible = 2;
+}
+
+message SchemaChangeDetail {
+  string type = 1;
+  string field = 2;
+  string old_value = 3;
+  string new_value = 4;
+  bool is_breaking = 5;
+}
+
+// ─── Field Mapping ─────────────────────────────────────────
+
+message FieldMapping {
+  string id = 1;
+  string sync_id = 2;
+  string source_stream = 3;
+  repeated FieldMap mappings = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+message FieldMap {
+  string source_field = 1;
+  string dest_field = 2;
+  string transform = 3;
+}
+
+message CreateFieldMappingRequest {
+  string sync_id = 1;
+  string source_stream = 2;
+  repeated FieldMap mappings = 3;
+}
+
+message GetFieldMappingRequest {
+  string id = 1;
+}
+
+message UpdateFieldMappingRequest {
+  string id = 1;
+  repeated FieldMap mappings = 2;
+}
+
+message AutoMapFieldsRequest {
+  string source_connection_id = 1;
+  string dest_connection_id = 2;
+  string source_stream = 3;
+  string dest_stream = 4;
+}
+
+message AutoMapFieldsResponse {
+  repeated FieldMap suggested_mappings = 1;
+  double confidence = 2;
+}

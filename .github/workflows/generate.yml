@@ -40,6 +40,9 @@ jobs:
       - name: Install TypeScript proto plugins
         run: cd packages/proto-ts && npm install
 
+      - name: Add TS plugin binaries to PATH
+        run: echo "${{ github.workspace }}/packages/proto-ts/node_modules/.bin" >> $GITHUB_PATH
+
       - name: Update buf dependencies
         run: buf dep update
 

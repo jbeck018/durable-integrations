@@ -28,10 +28,10 @@ type DeadLetterRecord struct {
 // LoadWorker writes batches of records to destination connectors with retry
 // and dead letter queue support.
 type LoadWorker struct {
-	batchSize   int
-	maxRetries  int
-	baseDelay   time.Duration
-	maxDelay    time.Duration
+	batchSize  int
+	maxRetries int
+	baseDelay  time.Duration
+	maxDelay   time.Duration
 
 	// DistRateLimiter is an optional distributed rate limiter (e.g. Redis-backed)
 	// injected at worker initialization for multi-worker rate limit enforcement.

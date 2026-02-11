@@ -15,16 +15,16 @@ import (
 
 // SourceTestResult holds the results of testing a source connector.
 type SourceTestResult struct {
-	SpecValid    bool
-	CheckPassed  bool
-	CheckResult  *protocol.CheckResult
-	Catalog      *protocol.Catalog
-	StreamCount  int
-	Records      []protocol.Record
-	States       []protocol.State
-	Logs         []protocol.Log
-	RecordCount  int
-	Errors       []error
+	SpecValid   bool
+	CheckPassed bool
+	CheckResult *protocol.CheckResult
+	Catalog     *protocol.Catalog
+	StreamCount int
+	Records     []protocol.Record
+	States      []protocol.State
+	Logs        []protocol.Log
+	RecordCount int
+	Errors      []error
 }
 
 // DestTestResult holds the results of testing a destination connector.

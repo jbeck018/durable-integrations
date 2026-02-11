@@ -44,7 +44,7 @@ type FetchBatchInput struct {
 	Streams           []protocol.ConfiguredStream `json:"streams"`
 	State             map[string]json.RawMessage  `json:"state,omitempty"`
 	BatchSize         int                         `json:"batch_size"`
-	Partition         *otypes.PartitionRange   `json:"partition,omitempty"`
+	Partition         *otypes.PartitionRange      `json:"partition,omitempty"`
 }
 
 // FetchBatchOutput holds the records and updated state from a fetch operation.

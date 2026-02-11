@@ -42,12 +42,12 @@ type ModifySignal struct {
 
 // SignalState tracks pending signal state within a workflow.
 type SignalState struct {
-	PauseRequested  bool
-	CancelRequested bool
-	PauseReason     string
-	CancelReason    string
+	PauseRequested    bool
+	CancelRequested   bool
+	PauseReason       string
+	CancelReason      string
 	SaveStateOnCancel bool
-	PendingModify   *ModifySignal
+	PendingModify     *ModifySignal
 }
 
 // NewSignalState creates a zero-valued SignalState ready for use.

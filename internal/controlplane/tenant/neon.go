@@ -68,11 +68,11 @@ type neonCreateProjectRequest struct {
 }
 
 type neonProjectSpec struct {
-	Name              string                 `json:"name"`
-	RegionID          string                 `json:"region_id"`
-	PGVersion         int                    `json:"pg_version"`
-	StorePasswords    bool                   `json:"store_passwords"`
-	DefaultEndpoint   neonEndpointSettings   `json:"default_endpoint_settings"`
+	Name            string               `json:"name"`
+	RegionID        string               `json:"region_id"`
+	PGVersion       int                  `json:"pg_version"`
+	StorePasswords  bool                 `json:"store_passwords"`
+	DefaultEndpoint neonEndpointSettings `json:"default_endpoint_settings"`
 }
 
 type neonEndpointSettings struct {

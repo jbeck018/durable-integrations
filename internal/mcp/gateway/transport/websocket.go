@@ -14,18 +14,18 @@ import (
 )
 
 const (
-	wsPingInterval  = 30 * time.Second
-	wsPongTimeout   = 10 * time.Second
-	wsWriteTimeout  = 10 * time.Second
-	wsReadLimit     = 1 << 20 // 1 MB
+	wsPingInterval = 30 * time.Second
+	wsPongTimeout  = 10 * time.Second
+	wsWriteTimeout = 10 * time.Second
+	wsReadLimit    = 1 << 20 // 1 MB
 )
 
 // wsConn tracks a single WebSocket connection.
 type wsConn struct {
-	id   string
-	conn *websocket.Conn
-	mu   sync.Mutex // serializes writes
-	done chan struct{}
+	id        string
+	conn      *websocket.Conn
+	mu        sync.Mutex // serializes writes
+	done      chan struct{}
 	closeOnce sync.Once
 }
 
@@ -57,9 +57,9 @@ type WSTransport struct {
 	handler  RequestHandler
 	upgrader websocket.Upgrader
 
-	mu      sync.RWMutex
-	conns   map[string]*wsConn
-	nextID  atomic.Uint64
+	mu     sync.RWMutex
+	conns  map[string]*wsConn
+	nextID atomic.Uint64
 }
 
 // NewWSTransport creates a new WebSocket transport listening on the given address.

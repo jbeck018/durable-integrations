@@ -20,9 +20,9 @@ const (
 
 // sseClient tracks a single SSE connection.
 type sseClient struct {
-	id       string
-	events   chan []byte
-	done     chan struct{}
+	id        string
+	events    chan []byte
+	done      chan struct{}
 	closeOnce sync.Once
 }
 
@@ -36,13 +36,13 @@ func (c *sseClient) close() {
 // It exposes two HTTP endpoints: GET /sse for establishing the event stream,
 // and POST /message for receiving JSON-RPC requests from clients.
 type SSETransport struct {
-	addr     string
-	server   *http.Server
-	handler  RequestHandler
+	addr    string
+	server  *http.Server
+	handler RequestHandler
 
-	mu       sync.RWMutex
-	clients  map[string]*sseClient
-	nextID   atomic.Uint64
+	mu      sync.RWMutex
+	clients map[string]*sseClient
+	nextID  atomic.Uint64
 }
 
 // NewSSETransport creates a new SSE transport listening on the given address.

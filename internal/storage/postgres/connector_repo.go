@@ -35,7 +35,9 @@ func NewConnectorRepo(db *DB) *ConnectorRepo {
 const connectorColumns = `id, tenant_id, name, connector_type, config_encrypted, status, created_at, updated_at`
 
 // scanConnector scans a row into a Connector struct.
-func scanConnector(row interface{ Scan(dest ...interface{}) error }) (*Connector, error) {
+func scanConnector(row interface {
+	Scan(dest ...interface{}) error
+}) (*Connector, error) {
 	c := &Connector{}
 	err := row.Scan(
 		&c.ID,

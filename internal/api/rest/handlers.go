@@ -33,17 +33,17 @@ type Connection struct {
 
 // Sync represents a data synchronization job.
 type Sync struct {
-	ID              string                    `json:"id"`
-	TenantID        string                    `json:"tenant_id"`
-	Name            string                    `json:"name"`
-	SourceID        string                    `json:"source_id"`
-	DestinationID   string                    `json:"destination_id"`
-	Schedule        string                    `json:"schedule,omitempty"`
-	Status          string                    `json:"status"`
-	Catalog         *protocol.ConfiguredCatalog `json:"catalog,omitempty"`
-	FieldMappings   []FieldMapping            `json:"field_mappings,omitempty"`
-	CreatedAt       time.Time                 `json:"created_at"`
-	UpdatedAt       time.Time                 `json:"updated_at"`
+	ID            string                      `json:"id"`
+	TenantID      string                      `json:"tenant_id"`
+	Name          string                      `json:"name"`
+	SourceID      string                      `json:"source_id"`
+	DestinationID string                      `json:"destination_id"`
+	Schedule      string                      `json:"schedule,omitempty"`
+	Status        string                      `json:"status"`
+	Catalog       *protocol.ConfiguredCatalog `json:"catalog,omitempty"`
+	FieldMappings []FieldMapping              `json:"field_mappings,omitempty"`
+	CreatedAt     time.Time                   `json:"created_at"`
+	UpdatedAt     time.Time                   `json:"updated_at"`
 }
 
 // SyncRun represents a single execution of a sync job.
@@ -82,12 +82,12 @@ type Tenant struct {
 
 // FieldMapping describes a field-level mapping between source and destination.
 type FieldMapping struct {
-	ID          string `json:"id"`
-	SyncID      string `json:"sync_id,omitempty"`
-	TenantID    string `json:"tenant_id"`
-	SourceField string `json:"source_field"`
-	DestField   string `json:"dest_field"`
-	Transform   string `json:"transform,omitempty"`
+	ID          string    `json:"id"`
+	SyncID      string    `json:"sync_id,omitempty"`
+	TenantID    string    `json:"tenant_id"`
+	SourceField string    `json:"source_field"`
+	DestField   string    `json:"dest_field"`
+	Transform   string    `json:"transform,omitempty"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
@@ -103,32 +103,32 @@ type SchemaVersion struct {
 
 // SchemaComparison holds a diff between two schema versions.
 type SchemaComparison struct {
-	Stream   string                `json:"stream"`
-	Version1 int                   `json:"version1"`
-	Version2 int                   `json:"version2"`
-	Changes  []SchemaFieldChange   `json:"changes"`
+	Stream   string              `json:"stream"`
+	Version1 int                 `json:"version1"`
+	Version2 int                 `json:"version2"`
+	Changes  []SchemaFieldChange `json:"changes"`
 }
 
 // SchemaFieldChange describes a single schema field change.
 type SchemaFieldChange struct {
-	Field     string `json:"field"`
-	Change    string `json:"change"`
-	OldType   string `json:"old_type,omitempty"`
-	NewType   string `json:"new_type,omitempty"`
+	Field   string `json:"field"`
+	Change  string `json:"change"`
+	OldType string `json:"old_type,omitempty"`
+	NewType string `json:"new_type,omitempty"`
 }
 
 // MCPServer represents a registered MCP server.
 type MCPServer struct {
-	ID          string            `json:"id"`
-	TenantID    string            `json:"tenant_id"`
-	Name        string            `json:"name"`
-	URL         string            `json:"url"`
-	Transport   string            `json:"transport"`
-	Tools       []string          `json:"tools,omitempty"`
-	Metadata    map[string]string `json:"metadata,omitempty"`
-	Status      string            `json:"status"`
-	CreatedAt   time.Time         `json:"created_at"`
-	UpdatedAt   time.Time         `json:"updated_at"`
+	ID        string            `json:"id"`
+	TenantID  string            `json:"tenant_id"`
+	Name      string            `json:"name"`
+	URL       string            `json:"url"`
+	Transport string            `json:"transport"`
+	Tools     []string          `json:"tools,omitempty"`
+	Metadata  map[string]string `json:"metadata,omitempty"`
+	Status    string            `json:"status"`
+	CreatedAt time.Time         `json:"created_at"`
+	UpdatedAt time.Time         `json:"updated_at"`
 }
 
 // ---------------------------------------------------------------------------
@@ -156,20 +156,20 @@ type TestConnectionRequest struct {
 
 // CreateSyncRequest is the payload for creating a new sync.
 type CreateSyncRequest struct {
-	Name          string                     `json:"name"`
-	SourceID      string                     `json:"source_id"`
-	DestinationID string                     `json:"destination_id"`
-	Schedule      string                     `json:"schedule,omitempty"`
+	Name          string                      `json:"name"`
+	SourceID      string                      `json:"source_id"`
+	DestinationID string                      `json:"destination_id"`
+	Schedule      string                      `json:"schedule,omitempty"`
 	Catalog       *protocol.ConfiguredCatalog `json:"catalog,omitempty"`
-	FieldMappings []FieldMapping             `json:"field_mappings,omitempty"`
+	FieldMappings []FieldMapping              `json:"field_mappings,omitempty"`
 }
 
 // UpdateSyncRequest is the payload for updating a sync.
 type UpdateSyncRequest struct {
-	Name          string                     `json:"name,omitempty"`
-	Schedule      string                     `json:"schedule,omitempty"`
+	Name          string                      `json:"name,omitempty"`
+	Schedule      string                      `json:"schedule,omitempty"`
 	Catalog       *protocol.ConfiguredCatalog `json:"catalog,omitempty"`
-	FieldMappings []FieldMapping             `json:"field_mappings,omitempty"`
+	FieldMappings []FieldMapping              `json:"field_mappings,omitempty"`
 }
 
 // CreateTenantRequest is the payload for creating a tenant.
@@ -203,7 +203,7 @@ type UpdateMappingRequest struct {
 
 // AutoMapRequest is the payload for auto-mapping fields.
 type AutoMapRequest struct {
-	SyncID   string `json:"sync_id"`
+	SyncID     string `json:"sync_id"`
 	StreamName string `json:"stream_name"`
 }
 
@@ -841,7 +841,7 @@ func (h *StreamHandlers) GetStreamSchema(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	JSON(w, http.StatusOK, json.RawMessage(schema))
+	JSON(w, http.StatusOK, schema)
 }
 
 // ---------------------------------------------------------------------------

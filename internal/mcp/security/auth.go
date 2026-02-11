@@ -22,10 +22,10 @@ type MCPAuthenticator struct {
 
 // AgentIdentity represents an authenticated MCP agent.
 type AgentIdentity struct {
-	AgentID  string   `json:"agent_id"`
-	TenantID string   `json:"tenant_id"`
-	Scopes   []string `json:"scopes"`
-	IssuedAt time.Time `json:"issued_at"`
+	AgentID   string    `json:"agent_id"`
+	TenantID  string    `json:"tenant_id"`
+	Scopes    []string  `json:"scopes"`
+	IssuedAt  time.Time `json:"issued_at"`
 	ExpiresAt time.Time `json:"expires_at"`
 }
 
@@ -205,7 +205,7 @@ type RateLimiter struct {
 }
 
 type rateLimitWindow struct {
-	count     int
+	count       int
 	windowStart time.Time
 }
 

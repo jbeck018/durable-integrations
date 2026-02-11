@@ -55,9 +55,9 @@ type pendingFlow struct {
 // It manages pending authorization flows and token storage.
 type OAuthManager struct {
 	mu           sync.RWMutex
-	pendingFlows map[string]*pendingFlow  // state -> pending flow
-	tokens       map[string]*OAuthTokens  // integration ID -> tokens
-	configs      map[string]OAuthConfig   // connector type -> oauth config
+	pendingFlows map[string]*pendingFlow // state -> pending flow
+	tokens       map[string]*OAuthTokens // integration ID -> tokens
+	configs      map[string]OAuthConfig  // connector type -> oauth config
 	httpClient   *http.Client
 }
 

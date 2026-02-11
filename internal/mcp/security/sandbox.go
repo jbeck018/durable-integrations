@@ -29,15 +29,15 @@ type SandboxConfig struct {
 
 // AuditEntry records a single tool invocation for audit purposes.
 type AuditEntry struct {
-	Timestamp   time.Time       `json:"timestamp"`
-	AgentID     string          `json:"agent_id"`
-	TenantID    string          `json:"tenant_id"`
-	ToolName    string          `json:"tool_name"`
-	Params      json.RawMessage `json:"params,omitempty"`
-	DurationMS  int64           `json:"duration_ms"`
-	OutputSize  int             `json:"output_size"`
-	Success     bool            `json:"success"`
-	Error       string          `json:"error,omitempty"`
+	Timestamp  time.Time       `json:"timestamp"`
+	AgentID    string          `json:"agent_id"`
+	TenantID   string          `json:"tenant_id"`
+	ToolName   string          `json:"tool_name"`
+	Params     json.RawMessage `json:"params,omitempty"`
+	DurationMS int64           `json:"duration_ms"`
+	OutputSize int             `json:"output_size"`
+	Success    bool            `json:"success"`
+	Error      string          `json:"error,omitempty"`
 }
 
 // AuditLogger is the function type for audit log consumers.

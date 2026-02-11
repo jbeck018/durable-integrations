@@ -16,9 +16,9 @@ type Config struct {
 	LogLevel    string
 
 	// API
-	APIPort    int
-	APIHost    string
-	GRPCPort   int
+	APIPort  int
+	APIHost  string
+	GRPCPort int
 
 	// Database
 	DBHost     string
@@ -63,11 +63,11 @@ type Config struct {
 	EncryptionKey string
 
 	// Performance
-	WorkerConcurrency    int
-	BatchSize            int
-	ConnectionPoolSize   int
-	RequestTimeout       time.Duration
-	ShutdownGracePeriod  time.Duration
+	WorkerConcurrency   int
+	BatchSize           int
+	ConnectionPoolSize  int
+	RequestTimeout      time.Duration
+	ShutdownGracePeriod time.Duration
 }
 
 // LoadConfig reads configuration from environment variables with defaults.

@@ -20,12 +20,12 @@ type Batcher struct {
 	flushInterval time.Duration
 	flushFn       func([]protocol.Record) error
 
-	mu       sync.Mutex
-	buffer   []protocol.Record
-	closed   bool
-	done     chan struct{}
-	timer    *time.Timer
-	lastErr  error // last error from timer-triggered flush
+	mu      sync.Mutex
+	buffer  []protocol.Record
+	closed  bool
+	done    chan struct{}
+	timer   *time.Timer
+	lastErr error // last error from timer-triggered flush
 }
 
 // NewBatcher creates a Batcher that flushes when maxSize records accumulate

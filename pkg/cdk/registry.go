@@ -7,18 +7,18 @@ import (
 
 // registry is the global connector registry.
 var registry = &connectorRegistry{
-	sources:        make(map[string]Source),
-	destinations:   make(map[string]Destination),
-	bidirectional:  make(map[string]Bidirectional),
-	meta:           make(map[string]ConnectorMeta),
+	sources:       make(map[string]Source),
+	destinations:  make(map[string]Destination),
+	bidirectional: make(map[string]Bidirectional),
+	meta:          make(map[string]ConnectorMeta),
 }
 
 type connectorRegistry struct {
-	mu             sync.RWMutex
-	sources        map[string]Source
-	destinations   map[string]Destination
-	bidirectional  map[string]Bidirectional
-	meta           map[string]ConnectorMeta
+	mu            sync.RWMutex
+	sources       map[string]Source
+	destinations  map[string]Destination
+	bidirectional map[string]Bidirectional
+	meta          map[string]ConnectorMeta
 }
 
 // RegisterSource registers a source connector by name.

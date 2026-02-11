@@ -62,11 +62,11 @@ type StreamRecord struct {
 
 // SchemaVersionRecord is the database representation of a schema version.
 type SchemaVersionRecord struct {
-	ID        string          `json:"id"`
-	StreamID  string          `json:"stream_id"`
-	Version   int             `json:"version"`
-	Schema    json.RawMessage `json:"schema"`
-	Diff      json.RawMessage `json:"diff"`
+	ID       string          `json:"id"`
+	StreamID string          `json:"stream_id"`
+	Version  int             `json:"version"`
+	Schema   json.RawMessage `json:"schema"`
+	Diff     json.RawMessage `json:"diff"`
 }
 
 // SchemaCache provides caching for stream schemas.

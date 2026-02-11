@@ -110,7 +110,7 @@ Subcommands:
 }
 
 func syncList(args []string) error {
-	tenantID := flagValue(args, "--tenant", "")
+	tenantID := flagValue(args, "--tenant")
 	path := "/api/v1/syncs"
 	if tenantID != "" {
 		path += "?tenant_id=" + tenantID
@@ -125,10 +125,10 @@ func syncList(args []string) error {
 }
 
 func syncCreate(args []string) error {
-	sourceID := flagValue(args, "--source", "")
-	destID := flagValue(args, "--dest", "")
-	tenantID := flagValue(args, "--tenant", "")
-	schedule := flagValue(args, "--schedule", "")
+	sourceID := flagValue(args, "--source")
+	destID := flagValue(args, "--dest")
+	tenantID := flagValue(args, "--tenant")
+	schedule := flagValue(args, "--schedule")
 
 	if sourceID == "" || destID == "" || tenantID == "" {
 		return fmt.Errorf("usage: flowforge-cli sync create --source <id> --dest <id> --tenant <id> [--schedule <cron>]")
@@ -152,7 +152,7 @@ func syncCreate(args []string) error {
 }
 
 func syncTrigger(args []string) error {
-	syncID := flagValue(args, "--id", "")
+	syncID := flagValue(args, "--id")
 	if syncID == "" && len(args) > 0 && !strings.HasPrefix(args[0], "--") {
 		syncID = args[0]
 	}
@@ -169,7 +169,7 @@ func syncTrigger(args []string) error {
 }
 
 func syncPause(args []string) error {
-	syncID := flagValue(args, "--id", "")
+	syncID := flagValue(args, "--id")
 	if syncID == "" && len(args) > 0 && !strings.HasPrefix(args[0], "--") {
 		syncID = args[0]
 	}
@@ -186,7 +186,7 @@ func syncPause(args []string) error {
 }
 
 func syncResume(args []string) error {
-	syncID := flagValue(args, "--id", "")
+	syncID := flagValue(args, "--id")
 	if syncID == "" && len(args) > 0 && !strings.HasPrefix(args[0], "--") {
 		syncID = args[0]
 	}
@@ -203,7 +203,7 @@ func syncResume(args []string) error {
 }
 
 func syncStatus(args []string) error {
-	syncID := flagValue(args, "--id", "")
+	syncID := flagValue(args, "--id")
 	if syncID == "" && len(args) > 0 && !strings.HasPrefix(args[0], "--") {
 		syncID = args[0]
 	}
@@ -244,7 +244,7 @@ Subcommands:
 }
 
 func connectorList(args []string) error {
-	tenantID := flagValue(args, "--tenant", "")
+	tenantID := flagValue(args, "--tenant")
 	path := "/api/v1/connectors"
 	if tenantID != "" {
 		path += "?tenant_id=" + tenantID
@@ -259,7 +259,7 @@ func connectorList(args []string) error {
 }
 
 func connectorTest(args []string) error {
-	connectorID := flagValue(args, "--id", "")
+	connectorID := flagValue(args, "--id")
 	if connectorID == "" && len(args) > 0 && !strings.HasPrefix(args[0], "--") {
 		connectorID = args[0]
 	}
@@ -309,8 +309,8 @@ func tenantList(_ []string) error {
 }
 
 func tenantCreate(args []string) error {
-	name := flagValue(args, "--name", "")
-	namespace := flagValue(args, "--namespace", "")
+	name := flagValue(args, "--name")
+	namespace := flagValue(args, "--namespace")
 
 	if name == "" || namespace == "" {
 		return fmt.Errorf("usage: flowforge-cli tenant create --name <name> --namespace <namespace>")
@@ -354,7 +354,7 @@ Subcommands:
 }
 
 func schemaDiscover(args []string) error {
-	connectionID := flagValue(args, "--connection", "")
+	connectionID := flagValue(args, "--connection")
 	if connectionID == "" && len(args) > 0 && !strings.HasPrefix(args[0], "--") {
 		connectionID = args[0]
 	}
@@ -371,9 +371,9 @@ func schemaDiscover(args []string) error {
 }
 
 func schemaDiff(args []string) error {
-	streamID := flagValue(args, "--stream", "")
-	v1 := flagValue(args, "--v1", "")
-	v2 := flagValue(args, "--v2", "")
+	streamID := flagValue(args, "--stream")
+	v1 := flagValue(args, "--v1")
+	v2 := flagValue(args, "--v2")
 
 	if streamID == "" || v1 == "" || v2 == "" {
 		return fmt.Errorf("usage: flowforge-cli schema diff --stream <stream-id> --v1 <version> --v2 <version>")
@@ -469,8 +469,8 @@ func doRequest(req *http.Request) (json.RawMessage, error) {
 // ---------------------------------------------------------------------------
 
 // flagValue scans args for a --key value pair and returns the value.
-// Returns defaultVal if the flag is not present.
-func flagValue(args []string, key, defaultVal string) string {
+// Returns "" if the flag is not present.
+func flagValue(args []string, key string) string {
 	for i := 0; i < len(args)-1; i++ {
 		if args[i] == key {
 			return args[i+1]
@@ -487,7 +487,7 @@ func flagValue(args []string, key, defaultVal string) string {
 			return strings.TrimPrefix(last, key+"=")
 		}
 	}
-	return defaultVal
+	return ""
 }
 
 // printJSON pretty-prints a JSON value to stdout.

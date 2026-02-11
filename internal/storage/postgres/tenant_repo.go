@@ -33,7 +33,9 @@ func NewTenantRepo(db *DB) *TenantRepo {
 }
 
 // scanTenant scans a single tenant row into a Tenant struct.
-func scanTenant(row interface{ Scan(dest ...interface{}) error }) (*Tenant, error) {
+func scanTenant(row interface {
+	Scan(dest ...interface{}) error
+}) (*Tenant, error) {
 	t := &Tenant{}
 	err := row.Scan(
 		&t.ID,

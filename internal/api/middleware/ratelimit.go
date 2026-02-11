@@ -69,11 +69,13 @@ func newRateLimiterStore(requestsPerMinute int) *rateLimiterStore {
 // getBucket returns or creates a token bucket for the given tenant.
 func (s *rateLimiterStore) getBucket(tenantID string) *tokenBucket {
 	if v, ok := s.buckets.Load(tenantID); ok {
-		return v.(*tokenBucket)
+		tb, _ := v.(*tokenBucket)
+		return tb
 	}
 	bucket := newTokenBucket(s.requestsPerMinute)
 	actual, _ := s.buckets.LoadOrStore(tenantID, bucket)
-	return actual.(*tokenBucket)
+	tb, _ := actual.(*tokenBucket)
+	return tb
 }
 
 // cleanup removes stale buckets every 5 minutes to prevent unbounded memory growth.
@@ -82,7 +84,7 @@ func (s *rateLimiterStore) cleanup() {
 	defer ticker.Stop()
 	for range ticker.C {
 		s.buckets.Range(func(key, value interface{}) bool {
-			bucket := value.(*tokenBucket)
+			bucket, _ := value.(*tokenBucket)
 			bucket.mu.Lock()
 			idle := time.Since(bucket.lastRefill)
 			bucket.mu.Unlock()

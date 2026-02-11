@@ -75,7 +75,7 @@ func (p *Pool[T]) Start(ctx context.Context) {
 
 // worker is the main loop for a single pool goroutine. It pulls items from the
 // input channel, processes them, and updates atomic stats counters.
-func (p *Pool[T]) worker(ctx context.Context, id int) {
+func (p *Pool[T]) worker(ctx context.Context, _ int) {
 	defer p.wg.Done()
 	for {
 		select {

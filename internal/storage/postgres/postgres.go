@@ -6,7 +6,6 @@ package postgres
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -100,15 +99,6 @@ type querier interface {
 	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 }
 
-// q returns the querier for a given optional transaction.
-// If tx is nil the pool is used directly.
-func (db *DB) q(tx *Tx) querier {
-	if tx != nil {
-		return tx.tx
-	}
-	return db.pool
-}
-
 // queryRow executes a query expected to return at most one row.
 // The scanner function receives the *sql.Row to scan into struct fields.
 func queryRow(ctx context.Context, q querier, query string, args []interface{}, scanner func(*sql.Row) error) error {
@@ -158,15 +148,6 @@ func execExpectOne(ctx context.Context, q querier, query string, args ...interfa
 		return common.ErrNotFound
 	}
 	return nil
-}
-
-// jsonBytes marshals v to JSON bytes for storage in a JSONB column.
-// If v is nil, it returns the JSON null representation.
-func jsonBytes(v interface{}) ([]byte, error) {
-	if v == nil {
-		return []byte("{}"), nil
-	}
-	return json.Marshal(v)
 }
 
 // newID generates a new UUID string for use as a primary key.

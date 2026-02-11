@@ -10,12 +10,12 @@ import (
 
 // OAuthConfig holds the OAuth2 credentials parsed from a connector's config JSON.
 type OAuthConfig struct {
-	ClientID     string `json:"client_id"`
-	ClientSecret string `json:"client_secret"`
-	RefreshToken string `json:"refresh_token"`
-	AccessToken  string `json:"access_token"`
-	TokenURL     string `json:"token_url"`
-	AuthURL      string `json:"auth_url"`
+	ClientID     string   `json:"client_id"`
+	ClientSecret string   `json:"client_secret"`
+	RefreshToken string   `json:"refresh_token"`
+	AccessToken  string   `json:"access_token"`
+	TokenURL     string   `json:"token_url"`
+	AuthURL      string   `json:"auth_url"`
 	Scopes       []string `json:"scopes"`
 	// Extra parameters that some providers require (e.g. Salesforce instance_url).
 	Extra map[string]string `json:"extra,omitempty"`

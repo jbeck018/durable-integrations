@@ -2,7 +2,6 @@ package transform
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sync"
 
@@ -194,7 +193,7 @@ func (tw *TransformWorker) applyMappingsColumnar(
 			return nil, fmt.Errorf("map record %d: %w", i, merr)
 		}
 		rec := records[i]
-		rec.Data = json.RawMessage(mapped)
+		rec.Data = mapped
 		result = append(result, rec)
 	}
 	return result, nil
@@ -216,7 +215,7 @@ func (tw *TransformWorker) applyMappingsRowwise(
 			return nil, fmt.Errorf("map record %d: %w", i, err)
 		}
 		rec := records[i]
-		rec.Data = json.RawMessage(mapped)
+		rec.Data = mapped
 		result = append(result, rec)
 	}
 	return result, nil

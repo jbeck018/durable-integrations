@@ -75,10 +75,10 @@ type SchemaMessage struct {
 type SchemaChange string
 
 const (
-	SchemaChangeNone         SchemaChange = ""
-	SchemaChangeNewColumn    SchemaChange = "NEW_COLUMN"
+	SchemaChangeNone          SchemaChange = ""
+	SchemaChangeNewColumn     SchemaChange = "NEW_COLUMN"
 	SchemaChangeRemovedColumn SchemaChange = "REMOVED_COLUMN"
-	SchemaChangeTypeChange   SchemaChange = "TYPE_CHANGE"
+	SchemaChangeTypeChange    SchemaChange = "TYPE_CHANGE"
 )
 
 // LogLevel enumerates log severities.
@@ -103,10 +103,10 @@ type Log struct {
 type ControlType string
 
 const (
-	ControlTypeRateLimit   ControlType = "RATE_LIMIT"
+	ControlTypeRateLimit    ControlType = "RATE_LIMIT"
 	ControlTypeBackpressure ControlType = "BACKPRESSURE"
-	ControlTypePause       ControlType = "PAUSE"
-	ControlTypeResume      ControlType = "RESUME"
+	ControlTypePause        ControlType = "PAUSE"
+	ControlTypeResume       ControlType = "RESUME"
 )
 
 // Control represents a bidirectional control signal.
@@ -158,14 +158,14 @@ const (
 
 // Stream describes a data stream exposed by a connector.
 type Stream struct {
-	Name                string          `json:"name"`
-	Namespace           string          `json:"namespace,omitempty"`
-	DisplayName         string          `json:"display_name,omitempty"`
-	Schema              json.RawMessage `json:"json_schema"`
-	SupportedSyncModes  []SyncMode      `json:"supported_sync_modes"`
-	DefaultCursorField  []string        `json:"default_cursor_field,omitempty"`
-	SourceDefinedPK     bool            `json:"source_defined_primary_key,omitempty"`
-	PrimaryKey          [][]string      `json:"primary_key,omitempty"`
+	Name               string          `json:"name"`
+	Namespace          string          `json:"namespace,omitempty"`
+	DisplayName        string          `json:"display_name,omitempty"`
+	Schema             json.RawMessage `json:"json_schema"`
+	SupportedSyncModes []SyncMode      `json:"supported_sync_modes"`
+	DefaultCursorField []string        `json:"default_cursor_field,omitempty"`
+	SourceDefinedPK    bool            `json:"source_defined_primary_key,omitempty"`
+	PrimaryKey         [][]string      `json:"primary_key,omitempty"`
 }
 
 // ConfiguredStream describes a user-selected stream with sync configuration.
@@ -203,9 +203,9 @@ type CheckResult struct {
 
 // WriteResult holds the result of a write operation.
 type WriteResult struct {
-	RecordsWritten int64            `json:"records_written"`
-	Errors         []WriteError     `json:"errors,omitempty"`
-	StateMessages  []State          `json:"state_messages,omitempty"`
+	RecordsWritten int64        `json:"records_written"`
+	Errors         []WriteError `json:"errors,omitempty"`
+	StateMessages  []State      `json:"state_messages,omitempty"`
 }
 
 // WriteError records a single write failure.

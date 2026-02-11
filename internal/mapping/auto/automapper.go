@@ -274,14 +274,14 @@ func typeCompatibility(srcType, destType string) float64 {
 
 	// Define compatible type pairs (bidirectional coercion).
 	compatible := map[[2]string]float64{
-		{"string", "number"}:  0.3,
-		{"number", "string"}:  0.5,
-		{"string", "integer"}: 0.3,
-		{"integer", "string"}: 0.5,
-		{"integer", "number"}: 0.9,
-		{"number", "integer"}: 0.7,
-		{"boolean", "string"}: 0.4,
-		{"string", "boolean"}: 0.3,
+		{"string", "number"}:   0.3,
+		{"number", "string"}:   0.5,
+		{"string", "integer"}:  0.3,
+		{"integer", "string"}:  0.5,
+		{"integer", "number"}:  0.9,
+		{"number", "integer"}:  0.7,
+		{"boolean", "string"}:  0.4,
+		{"string", "boolean"}:  0.3,
 		{"boolean", "integer"}: 0.3,
 		{"integer", "boolean"}: 0.3,
 	}

@@ -631,12 +631,12 @@ func (c *Connector) Resolve(ctx context.Context, conflicts []cdk.Conflict) ([]cd
 // WebhookHandler processes HubSpot webhook events.
 func (c *Connector) WebhookHandler(ctx context.Context, event cdk.WebhookEvent) error {
 	var payload []struct {
-		EventID      int64  `json:"eventId"`
+		EventID          int64  `json:"eventId"`
 		SubscriptionType string `json:"subscriptionType"`
-		ObjectID     int64  `json:"objectId"`
-		PropertyName string `json:"propertyName"`
-		ChangeSource string `json:"changeSource"`
-		OccurredAt   int64  `json:"occurredAt"`
+		ObjectID         int64  `json:"objectId"`
+		PropertyName     string `json:"propertyName"`
+		ChangeSource     string `json:"changeSource"`
+		OccurredAt       int64  `json:"occurredAt"`
 	}
 	if err := json.Unmarshal(event.Body, &payload); err != nil {
 		return errs.NewConnectorError(connectorName, "webhook_parse", err)

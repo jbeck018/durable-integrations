@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -36,10 +37,10 @@ type Metrics struct {
 	ErrorsTotal        *prometheus.CounterVec
 
 	// Histograms
-	SyncDuration              *prometheus.HistogramVec
-	APIRequestDuration        *prometheus.HistogramVec
+	SyncDuration               *prometheus.HistogramVec
+	APIRequestDuration         *prometheus.HistogramVec
 	ConnectorOperationDuration *prometheus.HistogramVec
-	BatchSize                 *prometheus.HistogramVec
+	BatchSize                  *prometheus.HistogramVec
 
 	// Gauges
 	ActiveSyncs       *prometheus.GaugeVec
@@ -55,8 +56,8 @@ type Metrics struct {
 func NewMetrics(namespace string) *Metrics {
 	reg := prometheus.NewRegistry()
 	// Include the default process and Go collectors for operational insight.
-	reg.MustRegister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
-	reg.MustRegister(prometheus.NewGoCollector())
+	reg.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+	reg.MustRegister(collectors.NewGoCollector())
 
 	m := &Metrics{
 		Registry: reg,

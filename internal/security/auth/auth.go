@@ -96,9 +96,9 @@ type APIKeyStore interface {
 // InMemoryAPIKeyStore provides an in-memory implementation of APIKeyStore.
 // Suitable for testing and development environments.
 type InMemoryAPIKeyStore struct {
-	mu      sync.RWMutex
-	keys    map[string]*APIKeyRecord // keyed by ID
-	byHash  map[string]string        // keyHash -> ID
+	mu     sync.RWMutex
+	keys   map[string]*APIKeyRecord // keyed by ID
+	byHash map[string]string        // keyHash -> ID
 }
 
 // NewInMemoryAPIKeyStore creates a new in-memory API key store.

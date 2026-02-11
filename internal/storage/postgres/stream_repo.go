@@ -46,7 +46,9 @@ func NewStreamRepo(db *DB) *StreamRepo {
 const streamColumns = `id, connection_id, name, namespace, schema, supported_sync_modes, discovered_at, updated_at`
 
 // scanStream scans a row into a Stream struct.
-func scanStream(row interface{ Scan(dest ...interface{}) error }) (*Stream, error) {
+func scanStream(row interface {
+	Scan(dest ...interface{}) error
+}) (*Stream, error) {
 	s := &Stream{}
 	var ns sql.NullString
 	err := row.Scan(
@@ -69,7 +71,9 @@ func scanStream(row interface{ Scan(dest ...interface{}) error }) (*Stream, erro
 const schemaVersionColumns = `id, stream_id, version, schema, diff, created_at`
 
 // scanSchemaVersion scans a row into a SchemaVersion struct.
-func scanSchemaVersion(row interface{ Scan(dest ...interface{}) error }) (*SchemaVersion, error) {
+func scanSchemaVersion(row interface {
+	Scan(dest ...interface{}) error
+}) (*SchemaVersion, error) {
 	sv := &SchemaVersion{}
 	err := row.Scan(
 		&sv.ID,

@@ -50,11 +50,6 @@ func NewTenantConfigCache(client *Client, tenantID string, ttl time.Duration) *C
 	return &ConfigCache{client: client, ttl: ttl, prefix: TenantConfigCachePrefix(tenantID)}
 }
 
-// configKey builds the Redis key for a connector config entry.
-func configKey(connectorID string) string {
-	return configCachePrefix + connectorID
-}
-
 // Get retrieves a cached connector config by connector ID.
 // Returns the raw JSON config and true if found, nil and false if not cached.
 func (c *ConfigCache) Get(ctx context.Context, connectorID string) (json.RawMessage, bool, error) {
@@ -109,11 +104,6 @@ func NewTenantSchemaCache(client *Client, tenantID string, ttl time.Duration) *S
 		ttl = defaultCacheTTL
 	}
 	return &SchemaCache{client: client, ttl: ttl, prefix: TenantSchemaCachePrefix(tenantID)}
-}
-
-// schemaKey builds the Redis key for a stream schema entry.
-func schemaKey(streamID string) string {
-	return schemaCachePrefix + streamID
 }
 
 // Get retrieves a cached stream schema by stream ID.

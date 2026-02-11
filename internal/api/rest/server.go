@@ -81,7 +81,7 @@ func (s *Server) RegisterRoutes() {
 	r.Use(middleware.Recovery(s.logger))
 	r.Use(middleware.CORSConfig())
 	r.Use(middleware.RequestLogger(s.logger))
-	r.Use(middleware.RateLimit(s.config.WorkerConcurrency*10))
+	r.Use(middleware.RateLimit(s.config.WorkerConcurrency * 10))
 	r.Use(chimiddleware.RealIP)
 	r.Use(chimiddleware.RequestID)
 	r.Use(chimiddleware.Compress(5))

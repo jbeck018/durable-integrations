@@ -18,12 +18,12 @@ const (
 
 // Workflow names for registration and invocation.
 const (
-	SyncOrchestratorName        = "SyncOrchestrator"
-	ExtractWorkflowName         = "ExtractWorkflow"
-	TransformWorkflowName       = "TransformWorkflow"
-	LoadWorkflowName            = "LoadWorkflow"
-	ScheduledSyncWorkflowName   = "ScheduledSyncWorkflow"
-	BidirectionalSyncName       = "BidirectionalSyncWorkflow"
+	SyncOrchestratorName      = "SyncOrchestrator"
+	ExtractWorkflowName       = "ExtractWorkflow"
+	TransformWorkflowName     = "TransformWorkflow"
+	LoadWorkflowName          = "LoadWorkflow"
+	ScheduledSyncWorkflowName = "ScheduledSyncWorkflow"
+	BidirectionalSyncName     = "BidirectionalSyncWorkflow"
 )
 
 // Query names for workflow state introspection.
@@ -51,16 +51,16 @@ type FieldMapping = otypes.FieldMapping
 
 // SyncParams contains all parameters needed to execute a full sync workflow.
 type SyncParams struct {
-	SourceConnectorID string                    `json:"source_connector_id"`
-	DestConnectorID   string                    `json:"dest_connector_id"`
-	SourceConfig      json.RawMessage           `json:"source_config"`
-	DestConfig        json.RawMessage           `json:"dest_config"`
-	SelectedStreams    []protocol.ConfiguredStream `json:"selected_streams"`
-	FieldMappings     map[string][]FieldMapping  `json:"field_mappings"`
-	SyncMode          protocol.SyncMode          `json:"sync_mode"`
-	LastCheckpoint    map[string]json.RawMessage `json:"last_checkpoint,omitempty"`
-	TenantID          string                     `json:"tenant_id"`
-	SyncID            string                     `json:"sync_id"`
+	SourceConnectorID string                      `json:"source_connector_id"`
+	DestConnectorID   string                      `json:"dest_connector_id"`
+	SourceConfig      json.RawMessage             `json:"source_config"`
+	DestConfig        json.RawMessage             `json:"dest_config"`
+	SelectedStreams   []protocol.ConfiguredStream `json:"selected_streams"`
+	FieldMappings     map[string][]FieldMapping   `json:"field_mappings"`
+	SyncMode          protocol.SyncMode           `json:"sync_mode"`
+	LastCheckpoint    map[string]json.RawMessage  `json:"last_checkpoint,omitempty"`
+	TenantID          string                      `json:"tenant_id"`
+	SyncID            string                      `json:"sync_id"`
 }
 
 // SyncResult summarizes the outcome of a completed sync workflow.
@@ -107,11 +107,11 @@ type ExtractResult struct {
 
 // TransformParams contains the parameters for the transform child workflow.
 type TransformParams struct {
-	Records       []protocol.Record         `json:"records"`
-	FieldMappings map[string][]FieldMapping `json:"field_mappings"`
+	Records       []protocol.Record           `json:"records"`
+	FieldMappings map[string][]FieldMapping   `json:"field_mappings"`
 	Streams       []protocol.ConfiguredStream `json:"streams"`
-	TenantID      string                    `json:"tenant_id"`
-	SyncID        string                    `json:"sync_id"`
+	TenantID      string                      `json:"tenant_id"`
+	SyncID        string                      `json:"sync_id"`
 }
 
 // TransformResult holds the outcome of the transform child workflow.
@@ -135,9 +135,9 @@ type LoadParams struct {
 
 // LoadResult holds the outcome of the load child workflow.
 type LoadResult struct {
-	RecordsLoaded int64    `json:"records_loaded"`
-	BatchesWritten int    `json:"batches_written"`
-	Errors        []string `json:"errors,omitempty"`
+	RecordsLoaded  int64    `json:"records_loaded"`
+	BatchesWritten int      `json:"batches_written"`
+	Errors         []string `json:"errors,omitempty"`
 }
 
 // ScheduledSyncParams extends SyncParams with scheduling information.
@@ -160,12 +160,12 @@ type BidirectionalSyncParams struct {
 
 // BidirectionalSyncResult holds the outcome of a bidirectional sync.
 type BidirectionalSyncResult struct {
-	ForwardResult  SyncResult `json:"forward_result"`
-	ReverseResult  SyncResult `json:"reverse_result"`
-	ConflictsFound int        `json:"conflicts_found"`
-	ConflictsResolved int    `json:"conflicts_resolved"`
-	Duration       time.Duration `json:"duration"`
-	Errors         []string      `json:"errors,omitempty"`
+	ForwardResult     SyncResult    `json:"forward_result"`
+	ReverseResult     SyncResult    `json:"reverse_result"`
+	ConflictsFound    int           `json:"conflicts_found"`
+	ConflictsResolved int           `json:"conflicts_resolved"`
+	Duration          time.Duration `json:"duration"`
+	Errors            []string      `json:"errors,omitempty"`
 }
 
 // DefaultBatchSize returns the default batch size for processing.

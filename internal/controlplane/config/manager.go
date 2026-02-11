@@ -97,19 +97,19 @@ func (e *Encryptor) Decrypt(ciphertext []byte) ([]byte, error) {
 
 // RetryPolicy defines how failed sync operations should be retried.
 type RetryPolicy struct {
-	MaxRetries     int    `json:"max_retries"`
-	InitialBackoff string `json:"initial_backoff"` // e.g. "1s", "30s"
-	MaxBackoff     string `json:"max_backoff"`     // e.g. "5m"
+	MaxRetries     int     `json:"max_retries"`
+	InitialBackoff string  `json:"initial_backoff"` // e.g. "1s", "30s"
+	MaxBackoff     string  `json:"max_backoff"`     // e.g. "5m"
 	BackoffFactor  float64 `json:"backoff_factor"`
 }
 
 // StreamConfig describes a stream's sync configuration within a SyncConfig.
 type StreamConfig struct {
-	StreamName          string              `json:"stream_name"`
-	SyncMode            protocol.SyncMode   `json:"sync_mode"`
+	StreamName          string                       `json:"stream_name"`
+	SyncMode            protocol.SyncMode            `json:"sync_mode"`
 	DestinationSyncMode protocol.DestinationSyncMode `json:"destination_sync_mode"`
-	CursorField         []string            `json:"cursor_field,omitempty"`
-	PrimaryKey          [][]string          `json:"primary_key,omitempty"`
+	CursorField         []string                     `json:"cursor_field,omitempty"`
+	PrimaryKey          [][]string                   `json:"primary_key,omitempty"`
 }
 
 // FieldMapping describes a single source-to-destination field mapping.
@@ -121,15 +121,15 @@ type FieldMapping struct {
 
 // SyncConfig holds the complete configuration for a sync workflow.
 type SyncConfig struct {
-	SourceConnectorID string                       `json:"source_connector_id"`
-	DestConnectorID   string                       `json:"dest_connector_id"`
-	SourceConfig      json.RawMessage              `json:"source_config"`
-	DestConfig        json.RawMessage              `json:"dest_config"`
-	StreamConfigs     []StreamConfig               `json:"stream_configs"`
-	FieldMappings     map[string][]FieldMapping    `json:"field_mappings,omitempty"`
-	Schedule          string                       `json:"schedule,omitempty"`
-	BatchSize         int                          `json:"batch_size"`
-	RetryPolicy       *RetryPolicy                 `json:"retry_policy,omitempty"`
+	SourceConnectorID string                    `json:"source_connector_id"`
+	DestConnectorID   string                    `json:"dest_connector_id"`
+	SourceConfig      json.RawMessage           `json:"source_config"`
+	DestConfig        json.RawMessage           `json:"dest_config"`
+	StreamConfigs     []StreamConfig            `json:"stream_configs"`
+	FieldMappings     map[string][]FieldMapping `json:"field_mappings,omitempty"`
+	Schedule          string                    `json:"schedule,omitempty"`
+	BatchSize         int                       `json:"batch_size"`
+	RetryPolicy       *RetryPolicy              `json:"retry_policy,omitempty"`
 }
 
 // ConfigManager provides secure storage and retrieval of connector and sync

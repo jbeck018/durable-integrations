@@ -282,12 +282,12 @@ type sfStatementRequest struct {
 
 // sfStatementResponse is the response from the statements endpoint.
 type sfStatementResponse struct {
-	Code         string `json:"code"`
-	Message      string `json:"message"`
-	StatementHandle string `json:"statementHandle"`
+	Code              string `json:"code"`
+	Message           string `json:"message"`
+	StatementHandle   string `json:"statementHandle"`
 	ResultSetMetaData struct {
-		NumRows int `json:"numRows"`
-		Format  string `json:"format"`
+		NumRows int            `json:"numRows"`
+		Format  string         `json:"format"`
 		RowType []sfColumnMeta `json:"rowType"`
 	} `json:"resultSetMetaData"`
 	Data [][]interface{} `json:"data"`
@@ -321,16 +321,10 @@ func executeStatement(ctx context.Context, cfg *SnowflakeConfig, token, sql stri
 	if err != nil {
 		return nil, fmt.Errorf("create statement request: %w", err)
 	}
-	authScheme := "Bearer"
 	if cfg.PrivateKeyPEM != "" {
-		authScheme = "Bearer"
+		req.Header.Set("Authorization", "Bearer "+token)
 	} else {
-		authScheme = "Snowflake Token=\"" + token + "\""
-		req.Header.Set("Authorization", authScheme)
-		authScheme = "" // already set
-	}
-	if authScheme != "" {
-		req.Header.Set("Authorization", authScheme+" "+token)
+		req.Header.Set("Authorization", "Snowflake Token=\""+token+"\"")
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
@@ -431,29 +425,6 @@ func setAuthHeader(req *http.Request, cfg *SnowflakeConfig, token string) {
 		req.Header.Set("Authorization", fmt.Sprintf("Snowflake Token=\"%s\"", token))
 	}
 	req.Header.Set("X-Snowflake-Authorization-Token-Type", tokenType(cfg))
-}
-
-// fetchPartitionedResults retrieves additional result partitions by index.
-func fetchPartitionedResults(ctx context.Context, cfg *SnowflakeConfig, token, handle string, partition int) ([][]interface{}, error) {
-	partURL := fmt.Sprintf("%s/statements/%s?partition=%d", cfg.apiBaseURL(), handle, partition)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, partURL, nil)
-	if err != nil {
-		return nil, err
-	}
-	setAuthHeader(req, cfg, token)
-	req.Header.Set("Accept", "application/json")
-
-	resp, err := snowflakeHTTPClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	var partResp sfStatementResponse
-	if err := json.NewDecoder(resp.Body).Decode(&partResp); err != nil {
-		return nil, err
-	}
-	return partResp.Data, nil
 }
 
 // Check validates that we can connect to Snowflake by executing SELECT 1.
@@ -734,7 +705,7 @@ func (s *SnowflakeConnector) Write(ctx context.Context, config json.RawMessage, 
 	var writeErrors []protocol.WriteError
 	var stateMessages []protocol.State
 
-	flushBuf := func(streamName string, buf *streamBuf) error {
+	flushBuf := func(streamName string, buf *streamBuf) error { //nolint:unparam
 		if len(buf.records) == 0 {
 			return nil
 		}
@@ -983,7 +954,7 @@ func (s *SnowflakeConnector) Capabilities() []protocol.DestinationSyncMode {
 func (s *SnowflakeConnector) Resolve(_ context.Context, conflicts []cdk.Conflict) ([]cdk.Resolution, error) {
 	resolutions := make([]cdk.Resolution, len(conflicts))
 	for i, c := range conflicts {
-		strategy := cdk.ResolutionLastWrite
+		var strategy cdk.ResolutionStrategy
 		if c.SourceTS >= c.DestTS {
 			strategy = cdk.ResolutionSourceWins
 		} else {

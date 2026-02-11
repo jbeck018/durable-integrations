@@ -30,10 +30,10 @@ type SyncRepository interface {
 
 // SyncRecord represents a sync with schedule information from the repository.
 type SyncRecord struct {
-	SyncID     string `json:"sync_id"`
-	TenantID   string `json:"tenant_id"`
-	CronExpr   string `json:"cron_expr"`
-	Status     string `json:"status"`
+	SyncID   string `json:"sync_id"`
+	TenantID string `json:"tenant_id"`
+	CronExpr string `json:"cron_expr"`
+	Status   string `json:"status"`
 }
 
 // CronSchedule describes the schedule for a sync workflow.
@@ -305,11 +305,11 @@ func parseCronExpr(expr string) ([5]cronField, error) {
 	}
 
 	ranges := [5][2]int{
-		{0, 59},  // minute
-		{0, 23},  // hour
-		{1, 31},  // day of month
-		{1, 12},  // month
-		{0, 6},   // day of week
+		{0, 59}, // minute
+		{0, 23}, // hour
+		{1, 31}, // day of month
+		{1, 12}, // month
+		{0, 6},  // day of week
 	}
 
 	var result [5]cronField

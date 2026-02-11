@@ -288,7 +288,7 @@ func (c *Connector) readViaSearch(ctx context.Context, client *restcommon.RESTCl
 			},
 		}
 		if startingAfter != "" {
-			pagination := searchBody["pagination"].(map[string]interface{})
+			pagination, _ := searchBody["pagination"].(map[string]interface{})
 			pagination["starting_after"] = startingAfter
 		}
 

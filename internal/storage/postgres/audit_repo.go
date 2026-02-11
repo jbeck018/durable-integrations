@@ -34,7 +34,9 @@ func NewAuditRepo(db *DB) *AuditRepo {
 const auditColumns = `id, tenant_id, user_id, action, resource_type, resource_id, details, created_at`
 
 // scanAuditEntry scans a row into an AuditEntry struct.
-func scanAuditEntry(row interface{ Scan(dest ...interface{}) error }) (*AuditEntry, error) {
+func scanAuditEntry(row interface {
+	Scan(dest ...interface{}) error
+}) (*AuditEntry, error) {
 	e := &AuditEntry{}
 	err := row.Scan(
 		&e.ID,

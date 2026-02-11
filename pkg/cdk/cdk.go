@@ -86,19 +86,19 @@ type Resolution struct {
 
 // WebhookEvent represents an inbound webhook from an external system.
 type WebhookEvent struct {
-	Source    string            `json:"source"`
-	EventType string           `json:"event_type"`
-	Headers  map[string]string `json:"headers"`
-	Body     json.RawMessage   `json:"body"`
-	ReceivedAt int64           `json:"received_at"`
+	Source     string            `json:"source"`
+	EventType  string            `json:"event_type"`
+	Headers    map[string]string `json:"headers"`
+	Body       json.RawMessage   `json:"body"`
+	ReceivedAt int64             `json:"received_at"`
 }
 
 // ConnectorMeta holds metadata for a registered connector.
 type ConnectorMeta struct {
-	Name        string   `json:"name"`
-	DisplayName string   `json:"display_name"`
-	Version     string   `json:"version"`
-	Type        string   `json:"type"` // "source", "destination", "bidirectional"
-	Category    string   `json:"category"`
-	Icon        string   `json:"icon,omitempty"`
+	Name        string `json:"name"`
+	DisplayName string `json:"display_name"`
+	Version     string `json:"version"`
+	Type        string `json:"type"` // "source", "destination", "bidirectional"
+	Category    string `json:"category"`
+	Icon        string `json:"icon,omitempty"`
 }

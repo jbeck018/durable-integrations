@@ -360,12 +360,12 @@ func makeSchemaInfoTool() ToolDefinition {
 			for _, s := range catalog.Streams {
 				if s.Name == input.Stream {
 					result := struct {
-						Connector      string          `json:"connector"`
-						Stream         string          `json:"stream"`
-						Schema         json.RawMessage `json:"schema"`
-						SyncModes      []string        `json:"supported_sync_modes"`
-						PrimaryKey     [][]string      `json:"primary_key,omitempty"`
-						CursorField    []string        `json:"default_cursor_field,omitempty"`
+						Connector   string          `json:"connector"`
+						Stream      string          `json:"stream"`
+						Schema      json.RawMessage `json:"schema"`
+						SyncModes   []string        `json:"supported_sync_modes"`
+						PrimaryKey  [][]string      `json:"primary_key,omitempty"`
+						CursorField []string        `json:"default_cursor_field,omitempty"`
 					}{
 						Connector:   input.Connector,
 						Stream:      s.Name,

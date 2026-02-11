@@ -42,7 +42,7 @@ func NewHandler() (string, http.Handler) {
 			"code":    "unimplemented",
 			"message": "Connect-RPC transport requires buf generate; use REST endpoints at /api/v1/ instead",
 		}
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	})
 
 	return "/flowforge.api.v1.FlowForgeService/", mux

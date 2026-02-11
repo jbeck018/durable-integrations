@@ -26,17 +26,17 @@ const (
 // streamDefs maps stream names to their Chorus API endpoint details.
 var streamDefs = map[string]chorusStreamDef{
 	"meetings": {
-		listPath:     "/meetings",
-		resultsField: "meetings",
-		pk:           "id",
-		dateFilter:   "updatedAfter",
+		listPath:      "/meetings",
+		resultsField:  "meetings",
+		pk:            "id",
+		dateFilter:    "updatedAfter",
 		hasPagination: true,
 	},
 	"calls": {
-		listPath:     "/calls",
-		resultsField: "calls",
-		pk:           "id",
-		dateFilter:   "updatedAfter",
+		listPath:      "/calls",
+		resultsField:  "calls",
+		pk:            "id",
+		dateFilter:    "updatedAfter",
 		hasPagination: true,
 	},
 	"trackers": {
@@ -47,17 +47,17 @@ var streamDefs = map[string]chorusStreamDef{
 		hasPagination: false,
 	},
 	"insights": {
-		listPath:     "/insights",
-		resultsField: "insights",
-		pk:           "id",
-		dateFilter:   "fromDate",
+		listPath:      "/insights",
+		resultsField:  "insights",
+		pk:            "id",
+		dateFilter:    "fromDate",
 		hasPagination: true,
 	},
 	"participants": {
-		listPath:     "/participants",
-		resultsField: "participants",
-		pk:           "id",
-		dateFilter:   "updatedAfter",
+		listPath:      "/participants",
+		resultsField:  "participants",
+		pk:            "id",
+		dateFilter:    "updatedAfter",
 		hasPagination: true,
 	},
 }

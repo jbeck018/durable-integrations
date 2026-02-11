@@ -103,8 +103,8 @@ func run() error {
 	w := worker.New(temporalClient, syncTaskQueue, worker.Options{
 		MaxConcurrentActivityExecutionSize:     cfg.WorkerConcurrency,
 		MaxConcurrentWorkflowTaskExecutionSize: cfg.WorkerConcurrency / 2,
-		MaxConcurrentActivityTaskPollers:        4,
-		MaxConcurrentWorkflowTaskPollers:        4,
+		MaxConcurrentActivityTaskPollers:       4,
+		MaxConcurrentWorkflowTaskPollers:       4,
 	})
 
 	// Register all workflows and activities with the worker.

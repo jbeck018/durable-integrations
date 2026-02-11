@@ -2,7 +2,6 @@ package transform
 
 import (
 	"fmt"
-	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -204,14 +203,11 @@ func (tc *TypeCoercer) registerBuiltins() {
 		return float64(i), nil
 	}
 
-	// float -> int
+	// float -> int (truncates toward zero via int64 conversion)
 	tc.converters["float->int"] = func(v interface{}) (interface{}, error) {
 		f, ok := toFloat64(v)
 		if !ok {
 			return nil, fmt.Errorf("cannot convert %T to float for int conversion", v)
-		}
-		if f != math.Trunc(f) {
-			// Truncate toward zero.
 		}
 		return int64(f), nil
 	}
@@ -260,7 +256,7 @@ func (tc *TypeCoercer) registerBuiltins() {
 }
 
 // toString coerces a value to its string representation.
-func toString(v interface{}) (string, bool) {
+func toString(v interface{}) (string, bool) { //nolint:unparam
 	switch s := v.(type) {
 	case string:
 		return s, true

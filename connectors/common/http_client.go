@@ -362,7 +362,7 @@ func (c *RESTClient) adaptiveIncrease() {
 }
 
 // applyAuth adds authentication headers to the request.
-func (c *RESTClient) applyAuth(ctx context.Context, req *http.Request) error {
+func (c *RESTClient) applyAuth(_ context.Context, req *http.Request) error {
 	if c.tokenSrc != nil {
 		tok, err := c.tokenSrc.Token()
 		if err != nil {

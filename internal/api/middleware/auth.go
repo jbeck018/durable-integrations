@@ -69,10 +69,10 @@ func APIKeyAuth(validator APIKeyValidator) func(http.Handler) http.Handler {
 
 // JWTConfig holds configuration for JWT validation.
 type JWTConfig struct {
-	Secret          string
-	Issuer          string
-	Audience        string
-	ClockSkew       time.Duration
+	Secret    string
+	Issuer    string
+	Audience  string
+	ClockSkew time.Duration
 }
 
 // jwtHeader is the JWT header structure.
@@ -200,7 +200,7 @@ func errInvalidToken(msg string) error {
 }
 
 // writeAuthError writes a JSON error response for auth failures.
-func writeAuthError(w http.ResponseWriter, status int, message, code string) {
+func writeAuthError(w http.ResponseWriter, status int, message, code string) { //nolint:unparam
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
 	enc := json.NewEncoder(w)

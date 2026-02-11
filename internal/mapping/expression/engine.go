@@ -75,15 +75,15 @@ type tokenType int
 const (
 	tokNumber tokenType = iota
 	tokString
-	tokField    // $.something
-	tokIdent    // function names
-	tokLParen   // (
-	tokRParen   // )
-	tokComma    // ,
-	tokPlus     // +
-	tokMinus    // -
-	tokStar     // *
-	tokSlash    // /
+	tokField  // $.something
+	tokIdent  // function names
+	tokLParen // (
+	tokRParen // )
+	tokComma  // ,
+	tokPlus   // +
+	tokMinus  // -
+	tokStar   // *
+	tokSlash  // /
 	tokEOF
 )
 
@@ -200,7 +200,7 @@ func (p *parser) peek() token {
 	return token{typ: tokEOF}
 }
 
-func (p *parser) advance() token {
+func (p *parser) advance() token { //nolint:unparam
 	t := p.peek()
 	if p.pos < len(p.tokens) {
 		p.pos++

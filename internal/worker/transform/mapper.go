@@ -214,7 +214,7 @@ func inferTypeString(val interface{}) string {
 //   - "upper" / "lower" / "trim" for string operations
 //   - "negate" for numeric negation
 //   - anything else returns the value unchanged.
-func evaluateExpression(expr string, val interface{}, record map[string]interface{}) interface{} {
+func evaluateExpression(expr string, val interface{}, _ map[string]interface{}) interface{} {
 	if val == nil {
 		return nil
 	}

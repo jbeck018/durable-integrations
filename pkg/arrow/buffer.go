@@ -15,10 +15,10 @@ import (
 // It accumulates records and provides efficient access patterns for
 // transform and load operations.
 type Batch struct {
-	mu      sync.RWMutex
-	columns map[string]*Column
+	mu       sync.RWMutex
+	columns  map[string]*Column
 	rowCount int
-	schema  *Schema
+	schema   *Schema
 }
 
 // Schema describes the column layout of a Batch.
@@ -159,7 +159,8 @@ func NewBufferPool(schema *Schema, capacity int) *BufferPool {
 
 // Get retrieves a Batch from the pool (or creates a new one).
 func (p *BufferPool) Get() *Batch {
-	return p.pool.Get().(*Batch)
+	b, _ := p.pool.Get().(*Batch)
+	return b
 }
 
 // Put returns a Batch to the pool after resetting it.

@@ -7,10 +7,10 @@ import (
 type contextKey string
 
 const (
-	tenantIDKey     contextKey = "tenant_id"
-	correlationKey  contextKey = "correlation_id"
-	userIDKey       contextKey = "user_id"
-	connectorKey    contextKey = "connector_name"
+	tenantIDKey    contextKey = "tenant_id"
+	correlationKey contextKey = "correlation_id"
+	userIDKey      contextKey = "user_id"
+	connectorKey   contextKey = "connector_name"
 )
 
 // WithTenantID attaches a tenant ID to the context.

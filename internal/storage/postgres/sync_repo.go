@@ -25,16 +25,16 @@ type Sync struct {
 
 // SyncRun represents a single execution of a sync.
 type SyncRun struct {
-	ID                  string          `json:"id"`
-	SyncID              string          `json:"sync_id"`
-	TenantID            string          `json:"tenant_id"`
-	Status              string          `json:"status"`
-	RecordsExtracted    int64           `json:"records_extracted"`
-	RecordsTransformed  int64           `json:"records_transformed"`
-	RecordsLoaded       int64           `json:"records_loaded"`
-	Errors              json.RawMessage `json:"errors"`
-	StartedAt           *time.Time      `json:"started_at,omitempty"`
-	CompletedAt         *time.Time      `json:"completed_at,omitempty"`
+	ID                 string          `json:"id"`
+	SyncID             string          `json:"sync_id"`
+	TenantID           string          `json:"tenant_id"`
+	Status             string          `json:"status"`
+	RecordsExtracted   int64           `json:"records_extracted"`
+	RecordsTransformed int64           `json:"records_transformed"`
+	RecordsLoaded      int64           `json:"records_loaded"`
+	Errors             json.RawMessage `json:"errors"`
+	StartedAt          *time.Time      `json:"started_at,omitempty"`
+	CompletedAt        *time.Time      `json:"completed_at,omitempty"`
 }
 
 // SyncState represents checkpoint state for incremental sync resumption.
@@ -59,7 +59,9 @@ func NewSyncRepo(db *DB) *SyncRepo {
 const syncColumns = `id, tenant_id, source_connection_id, dest_connection_id, config, schedule, status, created_at, updated_at`
 
 // scanSync scans a row into a Sync struct.
-func scanSync(row interface{ Scan(dest ...interface{}) error }) (*Sync, error) {
+func scanSync(row interface {
+	Scan(dest ...interface{}) error
+}) (*Sync, error) {
 	s := &Sync{}
 	err := row.Scan(
 		&s.ID,
@@ -81,7 +83,9 @@ func scanSync(row interface{ Scan(dest ...interface{}) error }) (*Sync, error) {
 const syncRunColumns = `id, sync_id, tenant_id, status, records_extracted, records_transformed, records_loaded, errors, started_at, completed_at`
 
 // scanSyncRun scans a row into a SyncRun struct.
-func scanSyncRun(row interface{ Scan(dest ...interface{}) error }) (*SyncRun, error) {
+func scanSyncRun(row interface {
+	Scan(dest ...interface{}) error
+}) (*SyncRun, error) {
 	r := &SyncRun{}
 	var startedAt, completedAt sql.NullTime
 	err := row.Scan(
@@ -107,7 +111,9 @@ func scanSyncRun(row interface{ Scan(dest ...interface{}) error }) (*SyncRun, er
 const syncStateColumns = `id, sync_id, stream_name, state_data, updated_at`
 
 // scanSyncState scans a row into a SyncState struct.
-func scanSyncState(row interface{ Scan(dest ...interface{}) error }) (*SyncState, error) {
+func scanSyncState(row interface {
+	Scan(dest ...interface{}) error
+}) (*SyncState, error) {
 	st := &SyncState{}
 	err := row.Scan(
 		&st.ID,

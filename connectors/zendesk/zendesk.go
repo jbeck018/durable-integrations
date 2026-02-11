@@ -25,54 +25,54 @@ const (
 // streamDefs maps stream names to their Zendesk API details.
 var streamDefs = map[string]zdStreamDef{
 	"tickets": {
-		listPath:          "/api/v2/tickets.json",
-		incrementalPath:   "/api/v2/incremental/tickets/cursor.json",
-		resultsField:      "tickets",
-		pk:                "id",
+		listPath:            "/api/v2/tickets.json",
+		incrementalPath:     "/api/v2/incremental/tickets/cursor.json",
+		resultsField:        "tickets",
+		pk:                  "id",
 		supportsIncremental: true,
-		writePath:         "/api/v2/tickets/create_many.json",
-		updatePath:        "/api/v2/tickets/update_many.json",
+		writePath:           "/api/v2/tickets/create_many.json",
+		updatePath:          "/api/v2/tickets/update_many.json",
 	},
 	"users": {
-		listPath:          "/api/v2/users.json",
-		incrementalPath:   "/api/v2/incremental/users/cursor.json",
-		resultsField:      "users",
-		pk:                "id",
+		listPath:            "/api/v2/users.json",
+		incrementalPath:     "/api/v2/incremental/users/cursor.json",
+		resultsField:        "users",
+		pk:                  "id",
 		supportsIncremental: true,
-		writePath:         "/api/v2/users/create_many.json",
-		updatePath:        "/api/v2/users/update_many.json",
+		writePath:           "/api/v2/users/create_many.json",
+		updatePath:          "/api/v2/users/update_many.json",
 	},
 	"organizations": {
-		listPath:          "/api/v2/organizations.json",
-		incrementalPath:   "/api/v2/incremental/organizations/cursor.json",
-		resultsField:      "organizations",
-		pk:                "id",
+		listPath:            "/api/v2/organizations.json",
+		incrementalPath:     "/api/v2/incremental/organizations/cursor.json",
+		resultsField:        "organizations",
+		pk:                  "id",
 		supportsIncremental: true,
-		writePath:         "/api/v2/organizations/create_many.json",
-		updatePath:        "/api/v2/organizations/update_many.json",
+		writePath:           "/api/v2/organizations/create_many.json",
+		updatePath:          "/api/v2/organizations/update_many.json",
 	},
 	"groups": {
-		listPath:     "/api/v2/groups.json",
-		resultsField: "groups",
-		pk:           "id",
+		listPath:            "/api/v2/groups.json",
+		resultsField:        "groups",
+		pk:                  "id",
 		supportsIncremental: false,
 	},
 	"ticket_comments": {
-		listPath:     "/api/v2/ticket_audits.json",
-		resultsField: "audits",
-		pk:           "id",
+		listPath:            "/api/v2/ticket_audits.json",
+		resultsField:        "audits",
+		pk:                  "id",
 		supportsIncremental: false,
 	},
 	"ticket_fields": {
-		listPath:     "/api/v2/ticket_fields.json",
-		resultsField: "ticket_fields",
-		pk:           "id",
+		listPath:            "/api/v2/ticket_fields.json",
+		resultsField:        "ticket_fields",
+		pk:                  "id",
 		supportsIncremental: false,
 	},
 	"satisfaction_ratings": {
-		listPath:     "/api/v2/satisfaction_ratings.json",
-		resultsField: "satisfaction_ratings",
-		pk:           "id",
+		listPath:            "/api/v2/satisfaction_ratings.json",
+		resultsField:        "satisfaction_ratings",
+		pk:                  "id",
 		supportsIncremental: false,
 	},
 }
@@ -598,8 +598,8 @@ func (c *Connector) Resolve(ctx context.Context, conflicts []cdk.Conflict) ([]cd
 // WebhookHandler processes Zendesk webhook trigger events.
 func (c *Connector) WebhookHandler(ctx context.Context, event cdk.WebhookEvent) error {
 	var payload struct {
-		TicketID   interface{} `json:"ticket_id"`
-		EventType  string      `json:"event_type"`
+		TicketID  interface{} `json:"ticket_id"`
+		EventType string      `json:"event_type"`
 	}
 	if err := json.Unmarshal(event.Body, &payload); err != nil {
 		return errs.NewConnectorError(connectorName, "webhook_parse", err)

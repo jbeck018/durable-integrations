@@ -264,7 +264,7 @@ func (c *Connector) Read(ctx context.Context, config json.RawMessage, catalog *p
 }
 
 // readStream reads a single object using SOQL with automatic nextRecordsUrl pagination.
-func (c *Connector) readStream(ctx context.Context, client *restcommon.RESTClient, cfg *sfConfig, cs protocol.ConfiguredStream, objName string, state map[string]json.RawMessage, output chan<- protocol.Message) error {
+func (c *Connector) readStream(ctx context.Context, client *restcommon.RESTClient, _ *sfConfig, cs protocol.ConfiguredStream, objName string, state map[string]json.RawMessage, output chan<- protocol.Message) error {
 	// Build field list from schema.
 	fields := extractFieldNames(cs.Stream.Schema)
 	if len(fields) == 0 {

@@ -88,8 +88,8 @@ func NewJWTService(config JWTConfig) (*JWTService, error) {
 func NewHMACJWTService(secret []byte) (*JWTService, error) {
 	return NewJWTService(JWTConfig{
 		SigningMethod: jwt.SigningMethodHS256,
-		HMACSecret:   secret,
-		Issuer:       "flowforge",
+		HMACSecret:    secret,
+		Issuer:        "flowforge",
 	})
 }
 

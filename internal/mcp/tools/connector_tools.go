@@ -114,7 +114,7 @@ func makeReadTool(connectorName string, meta cdk.ConnectorMeta) ToolDefinition {
 		}`),
 		Handler: func(ctx context.Context, params json.RawMessage) (json.RawMessage, error) {
 			var input struct {
-				Config  json.RawMessage            `json:"config"`
+				Config  json.RawMessage             `json:"config"`
 				Streams []protocol.ConfiguredStream `json:"streams"`
 				State   map[string]json.RawMessage  `json:"state"`
 			}
@@ -191,7 +191,7 @@ func makeWriteTool(connectorName string, meta cdk.ConnectorMeta) ToolDefinition 
 		}`),
 		Handler: func(ctx context.Context, params json.RawMessage) (json.RawMessage, error) {
 			var input struct {
-				Config  json.RawMessage            `json:"config"`
+				Config  json.RawMessage             `json:"config"`
 				Streams []protocol.ConfiguredStream `json:"streams"`
 				Records []protocol.Record           `json:"records"`
 			}

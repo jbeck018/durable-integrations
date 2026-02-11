@@ -10,16 +10,16 @@ import (
 
 // Sentinel errors for common failure modes across FlowForge.
 var (
-	ErrNotFound          = errors.New("not found")
-	ErrAlreadyExists     = errors.New("already exists")
-	ErrUnauthorized      = errors.New("unauthorized")
-	ErrForbidden         = errors.New("forbidden")
-	ErrRateLimited       = errors.New("rate limited")
-	ErrInvalidConfig     = errors.New("invalid configuration")
-	ErrConnectionFailed  = errors.New("connection failed")
-	ErrSchemaValidation  = errors.New("schema validation failed")
-	ErrTimeout           = errors.New("operation timed out")
-	ErrCancelled         = errors.New("operation cancelled")
+	ErrNotFound         = errors.New("not found")
+	ErrAlreadyExists    = errors.New("already exists")
+	ErrUnauthorized     = errors.New("unauthorized")
+	ErrForbidden        = errors.New("forbidden")
+	ErrRateLimited      = errors.New("rate limited")
+	ErrInvalidConfig    = errors.New("invalid configuration")
+	ErrConnectionFailed = errors.New("connection failed")
+	ErrSchemaValidation = errors.New("schema validation failed")
+	ErrTimeout          = errors.New("operation timed out")
+	ErrCancelled        = errors.New("operation cancelled")
 )
 
 // ConnectorError wraps errors originating from a connector with the connector name.

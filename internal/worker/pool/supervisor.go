@@ -27,11 +27,11 @@ type PoolHealth struct {
 
 // ScaleConfig defines auto-scaling thresholds for a pool.
 type ScaleConfig struct {
-	MinWorkers        int
-	MaxWorkers        int
-	ScaleUpThreshold  int // queue depth above which to scale up
+	MinWorkers         int
+	MaxWorkers         int
+	ScaleUpThreshold   int // queue depth above which to scale up
 	ScaleDownThreshold int // queue depth below which to scale down
-	CooldownPeriod    time.Duration
+	CooldownPeriod     time.Duration
 }
 
 // managedPool wraps a pool-like interface so the supervisor can manage pools

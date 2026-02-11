@@ -23,9 +23,9 @@ type Partitioner interface {
 // TimeRangePartitioner splits an extraction by time ranges. Each partition
 // covers a contiguous interval between Start and End.
 type TimeRangePartitioner struct {
-	Start       time.Time
-	End         time.Time
-	TimeFormat  string // Go time format for serialisation; defaults to RFC3339
+	Start      time.Time
+	End        time.Time
+	TimeFormat string // Go time format for serialisation; defaults to RFC3339
 }
 
 // Partition divides the time range [Start, End) into chunks of approximately

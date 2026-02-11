@@ -45,7 +45,7 @@ type S3Config struct {
 	Bucket          string `json:"bucket"`
 	Region          string `json:"region"`
 	AccessKeyID     string `json:"access_key_id,omitempty"`
-	SecretAccessKey  string `json:"secret_access_key,omitempty"`
+	SecretAccessKey string `json:"secret_access_key,omitempty"`
 	Prefix          string `json:"prefix,omitempty"`
 	FileFormat      string `json:"file_format"`
 	BatchSize       int    `json:"batch_size,omitempty"`
@@ -366,7 +366,7 @@ func inferSchemaFromObjects(ctx context.Context, client *s3.Client, cfg *S3Confi
 }
 
 // inferJSONSchema reads a JSON sample and builds a schema from its keys.
-func inferJSONSchema(sample []byte) (json.RawMessage, error) {
+func inferJSONSchema(sample []byte) (json.RawMessage, error) { //nolint:unparam
 	trimmed := bytes.TrimSpace(sample)
 	properties := make(map[string]interface{})
 	properties["_s3_key"] = map[string]string{"type": "string"}
@@ -409,7 +409,7 @@ func inferJSONSchema(sample []byte) (json.RawMessage, error) {
 }
 
 // inferCSVSchema reads a CSV header and creates string-typed properties.
-func inferCSVSchema(sample []byte, cfg *S3Config) (json.RawMessage, error) {
+func inferCSVSchema(sample []byte, cfg *S3Config) (json.RawMessage, error) { //nolint:unparam
 	reader := csv.NewReader(bytes.NewReader(sample))
 	if len(cfg.CSVDelimiter) > 0 {
 		reader.Comma = rune(cfg.CSVDelimiter[0])
@@ -960,7 +960,7 @@ func marshalJSON(records []map[string]interface{}) ([]byte, string) {
 }
 
 // marshalCSV serializes records as CSV with a header row.
-func marshalCSV(records []map[string]interface{}) ([]byte, string) {
+func marshalCSV(records []map[string]interface{}) ([]byte, string) { //nolint:unparam
 	if len(records) == 0 {
 		return nil, "text/csv"
 	}

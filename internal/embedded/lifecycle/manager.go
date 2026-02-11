@@ -26,9 +26,9 @@ const (
 
 // SyncSchedule defines when an integration should sync.
 type SyncSchedule struct {
-	CronExpression string `json:"cron_expression,omitempty"`
-	IntervalMinutes int   `json:"interval_minutes,omitempty"`
-	Timezone       string `json:"timezone,omitempty"`
+	CronExpression  string `json:"cron_expression,omitempty"`
+	IntervalMinutes int    `json:"interval_minutes,omitempty"`
+	Timezone        string `json:"timezone,omitempty"`
 }
 
 // IntegrationConfig holds the user-provided configuration for creating an

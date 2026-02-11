@@ -133,7 +133,9 @@ func parseConfig(raw json.RawMessage) (*BigQueryConfig, error) {
 
 // httpClient builds an authenticated *http.Client from the service account JSON.
 func httpClient(ctx context.Context, cfg *BigQueryConfig) (*http.Client, error) {
-	creds, err := google.CredentialsFromJSON(ctx, []byte(cfg.CredentialsJSON), bigqueryScope)
+	creds, err := google.CredentialsFromJSONWithParams(ctx, []byte(cfg.CredentialsJSON), google.CredentialsParams{
+		Scopes: []string{bigqueryScope},
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse credentials: %w", err)
 	}
@@ -338,17 +340,17 @@ func fetchTableSchema(ctx context.Context, client *http.Client, cfg *BigQueryCon
 
 // bqQueryRequest is the payload sent to the jobs.query endpoint.
 type bqQueryRequest struct {
-	Query          string `json:"query"`
-	UseLegacySQL   bool   `json:"useLegacySql"`
-	MaxResults     int    `json:"maxResults"`
-	Location       string `json:"location,omitempty"`
-	TimeoutMs      int64  `json:"timeoutMs,omitempty"`
-	PageToken      string `json:"pageToken,omitempty"`
+	Query        string `json:"query"`
+	UseLegacySQL bool   `json:"useLegacySql"`
+	MaxResults   int    `json:"maxResults"`
+	Location     string `json:"location,omitempty"`
+	TimeoutMs    int64  `json:"timeoutMs,omitempty"`
+	PageToken    string `json:"pageToken,omitempty"`
 }
 
 // bqQueryResponse models the jobs.query response.
 type bqQueryResponse struct {
-	JobComplete bool `json:"jobComplete"`
+	JobComplete  bool `json:"jobComplete"`
 	JobReference struct {
 		ProjectID string `json:"projectId"`
 		JobID     string `json:"jobId"`
@@ -357,10 +359,10 @@ type bqQueryResponse struct {
 	Schema struct {
 		Fields []bqField `json:"fields"`
 	} `json:"schema"`
-	Rows          []bqRow `json:"rows"`
-	TotalRows     string  `json:"totalRows"`
-	PageToken     string  `json:"pageToken"`
-	TotalBytesProcessed string `json:"totalBytesProcessed"`
+	Rows                []bqRow `json:"rows"`
+	TotalRows           string  `json:"totalRows"`
+	PageToken           string  `json:"pageToken"`
+	TotalBytesProcessed string  `json:"totalBytesProcessed"`
 }
 
 type bqRow struct {
@@ -570,7 +572,7 @@ func waitForJob(ctx context.Context, client *http.Client, cfg *BigQueryConfig, j
 		}
 		var jobStatus struct {
 			Status struct {
-				State      string `json:"state"`
+				State       string `json:"state"`
 				ErrorResult *struct {
 					Reason  string `json:"reason"`
 					Message string `json:"message"`
@@ -820,7 +822,7 @@ func (b *BigQueryConnector) Capabilities() []protocol.DestinationSyncMode {
 func (b *BigQueryConnector) Resolve(_ context.Context, conflicts []cdk.Conflict) ([]cdk.Resolution, error) {
 	resolutions := make([]cdk.Resolution, len(conflicts))
 	for i, c := range conflicts {
-		strategy := cdk.ResolutionLastWrite
+		var strategy cdk.ResolutionStrategy
 		if c.SourceTS >= c.DestTS {
 			strategy = cdk.ResolutionSourceWins
 		} else {

@@ -245,8 +245,8 @@ type Resolver struct {
 	SyncService      rest.SyncService
 
 	// Subscriptions hub.
-	subMu          sync.RWMutex
-	syncStatusSubs map[string][]chan SyncStatusEvent
+	subMu           sync.RWMutex
+	syncStatusSubs  map[string][]chan SyncStatusEvent
 	runProgressSubs map[string][]chan SyncRunProgressEvent
 }
 
@@ -944,7 +944,7 @@ func (r *Resolver) Handler() http.Handler {
 		if req.Method != http.MethodPost {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusMethodNotAllowed)
-			json.NewEncoder(w).Encode(graphQLResponse{
+			_ = json.NewEncoder(w).Encode(graphQLResponse{
 				Errors: []graphQLError{{Message: "only POST method is supported"}},
 			})
 			return
@@ -954,7 +954,7 @@ func (r *Resolver) Handler() http.Handler {
 		if err := json.NewDecoder(req.Body).Decode(&gqlReq); err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(graphQLResponse{
+			_ = json.NewEncoder(w).Encode(graphQLResponse{
 				Errors: []graphQLError{{Message: "invalid request body: " + err.Error()}},
 			})
 			return
@@ -977,7 +977,7 @@ func (r *Resolver) Handler() http.Handler {
 		}
 		enc := json.NewEncoder(w)
 		enc.SetEscapeHTML(false)
-		enc.Encode(resp)
+		_ = enc.Encode(resp)
 	})
 }
 

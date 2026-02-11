@@ -35,7 +35,9 @@ func NewConnectionRepo(db *DB) *ConnectionRepo {
 const connectionColumns = `id, tenant_id, connector_id, auth_type, credentials_ref, status, last_checked_at, created_at, updated_at`
 
 // scanConnection scans a row into a Connection struct.
-func scanConnection(row interface{ Scan(dest ...interface{}) error }) (*Connection, error) {
+func scanConnection(row interface {
+	Scan(dest ...interface{}) error
+}) (*Connection, error) {
 	c := &Connection{}
 	var credRef sql.NullString
 	var lastChecked sql.NullTime

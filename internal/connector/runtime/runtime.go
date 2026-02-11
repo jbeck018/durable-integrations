@@ -29,11 +29,11 @@ type ExecutionStats struct {
 // Runtime manages connector lifecycle, sandboxing, and resource limits for all
 // connector operations. It wraps the CDK registry and applies execution policies.
 type Runtime struct {
-	cfg             *common.Config
-	defaultSandbox  SandboxConfig
-	mu              sync.RWMutex
-	activeExecs     map[string]*executionTracker
-	execCounter     uint64
+	cfg            *common.Config
+	defaultSandbox SandboxConfig
+	mu             sync.RWMutex
+	activeExecs    map[string]*executionTracker
+	execCounter    uint64
 }
 
 // executionTracker monitors a single in-flight execution.
@@ -109,7 +109,7 @@ func (r *Runtime) startExecution(ctx context.Context, connector, op string) (con
 }
 
 // finishExecution removes the tracker and returns final stats.
-func (r *Runtime) finishExecution(tracker *executionTracker) ExecutionStats {
+func (r *Runtime) finishExecution(tracker *executionTracker) ExecutionStats { //nolint:unparam
 	tracker.cancel()
 	now := time.Now()
 	stats := ExecutionStats{

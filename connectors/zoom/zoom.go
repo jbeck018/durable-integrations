@@ -697,7 +697,7 @@ func readZoomStream(ctx context.Context, client *zoomClient, cfg *ZoomConfig, sd
 }
 
 // readSubResource reads child resources for each parent item.
-func readSubResource(ctx context.Context, client *zoomClient, sub subResource, parentItems []map[string]interface{}, cs protocol.ConfiguredStream, output chan<- protocol.Message) error {
+func readSubResource(ctx context.Context, client *zoomClient, sub subResource, parentItems []map[string]interface{}, _ protocol.ConfiguredStream, output chan<- protocol.Message) error {
 	for _, parent := range parentItems {
 		if err := ctx.Err(); err != nil {
 			return err

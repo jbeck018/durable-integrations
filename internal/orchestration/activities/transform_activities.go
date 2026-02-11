@@ -16,7 +16,7 @@ import (
 
 // MapFieldsInput contains the parameters for MapFieldsActivity.
 type MapFieldsInput struct {
-	Records       []protocol.Record            `json:"records"`
+	Records       []protocol.Record                `json:"records"`
 	FieldMappings map[string][]otypes.FieldMapping `json:"field_mappings"`
 }
 
@@ -100,7 +100,7 @@ func MapFieldsActivity(ctx context.Context, input MapFieldsInput) (*MapFieldsOut
 
 // CoerceTypesInput contains the parameters for CoerceTypesActivity.
 type CoerceTypesInput struct {
-	Records       []protocol.Record                   `json:"records"`
+	Records       []protocol.Record                `json:"records"`
 	FieldMappings map[string][]otypes.FieldMapping `json:"field_mappings"`
 }
 
@@ -283,7 +283,7 @@ func coerceToBool(val interface{}) (bool, error) {
 	}
 }
 
-func coerceToTimestamp(val interface{}) (string, error) {
+func coerceToTimestamp(val interface{}) (string, error) { //nolint:unparam
 	switch v := val.(type) {
 	case string:
 		// Try parsing common timestamp formats.
@@ -319,8 +319,8 @@ type DeduplicateInput struct {
 
 // DeduplicateOutput holds the deduplicated records.
 type DeduplicateOutput struct {
-	Records        []protocol.Record `json:"records"`
-	DuplicatesFound int64            `json:"duplicates_found"`
+	Records         []protocol.Record `json:"records"`
+	DuplicatesFound int64             `json:"duplicates_found"`
 }
 
 // DeduplicateActivity removes duplicate records from a batch based on primary

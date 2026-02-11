@@ -32,7 +32,7 @@ var streamDefs = map[string]gongStreamDef{
 		resultsField: "calls",
 		pk:           "id",
 		usePOST:      true,
-		bodyKey:       "filter",
+		bodyKey:      "filter",
 	},
 	"users": {
 		listPath:     "/v2/users",
@@ -47,7 +47,7 @@ var streamDefs = map[string]gongStreamDef{
 		resultsField: "meetings",
 		pk:           "id",
 		usePOST:      true,
-		bodyKey:       "filter",
+		bodyKey:      "filter",
 	},
 	"scorecards": {
 		listPath:     "/v2/settings/scorecards",
@@ -69,7 +69,7 @@ var streamDefs = map[string]gongStreamDef{
 		resultsField: "stats",
 		pk:           "",
 		usePOST:      true,
-		bodyKey:       "filter",
+		bodyKey:      "filter",
 	},
 }
 

@@ -6,6 +6,10 @@ deps:
 lint:
   use:
     - STANDARD
+  except:
+    - RPC_RESPONSE_STANDARD_NAME
+    - RPC_REQUEST_RESPONSE_UNIQUE
+    - PACKAGE_VERSION_SUFFIX
 breaking:
   use:
     - FILE

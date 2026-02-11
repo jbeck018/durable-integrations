@@ -7,8 +7,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/flowforge/flowforge/internal/common"
 	"github.com/lib/pq"
+
+	"github.com/flowforge/flowforge/internal/common"
 )
 
 // Stream represents a discovered data stream for a connection.

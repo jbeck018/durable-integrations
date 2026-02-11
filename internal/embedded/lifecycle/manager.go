@@ -9,8 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/flowforge/flowforge/internal/mapping/auto"
 	"github.com/google/uuid"
+
+	"github.com/flowforge/flowforge/internal/mapping/auto"
 )
 
 // IntegrationStatus represents the current state of an integration.

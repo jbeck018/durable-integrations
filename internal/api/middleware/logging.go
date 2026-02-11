@@ -5,8 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/flowforge/flowforge/internal/common"
 	"github.com/google/uuid"
+
+	"github.com/flowforge/flowforge/internal/common"
 )
 
 // responseRecorder wraps http.ResponseWriter to capture the status code and bytes written.

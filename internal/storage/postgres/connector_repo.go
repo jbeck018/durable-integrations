@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/flowforge/flowforge/internal/common"
 	"github.com/lib/pq"
+
+	"github.com/flowforge/flowforge/internal/common"
 )
 
 // Connector represents a connector registration in the database.

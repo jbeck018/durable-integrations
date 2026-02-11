@@ -133,6 +133,7 @@ func parseConfig(raw json.RawMessage) (*BigQueryConfig, error) {
 
 // httpClient builds an authenticated *http.Client from the service account JSON.
 func httpClient(ctx context.Context, cfg *BigQueryConfig) (*http.Client, error) {
+	//nolint:staticcheck // credentials JSON comes from validated connector config, not untrusted input
 	creds, err := google.CredentialsFromJSONWithParams(ctx, []byte(cfg.CredentialsJSON), google.CredentialsParams{
 		Scopes: []string{bigqueryScope},
 	})

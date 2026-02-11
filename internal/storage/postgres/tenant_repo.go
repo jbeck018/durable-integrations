@@ -7,8 +7,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/flowforge/flowforge/internal/common"
 	"github.com/lib/pq"
+
+	"github.com/flowforge/flowforge/internal/common"
 )
 
 // Tenant represents a FlowForge tenant in the database.

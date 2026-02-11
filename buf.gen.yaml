@@ -14,12 +14,8 @@ plugins:
   - remote: buf.build/connectrpc/go
     out: gen/go
     opt: paths=source_relative
-  # TypeScript types (Protobuf-ES v2)
+  # TypeScript types + Connect service stubs (Protobuf-ES v2 includes Connect codegen)
   - local: protoc-gen-es
-    out: packages/proto-ts/src/gen
-    opt: target=ts
-  # TypeScript Connect client stubs
-  - local: protoc-gen-connect-es
     out: packages/proto-ts/src/gen
     opt: target=ts
   # TanStack Query hooks from proto

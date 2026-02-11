@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: ["1.22", "1.23"]
+        go-version: ["1.24"]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,7 +33,7 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.59
+          version: v1.63
           args: --timeout=5m
 
   test:
@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: ["1.22", "1.23"]
+        go-version: ["1.24"]
     services:
       postgres:
         image: postgres:16-alpine
@@ -90,7 +90,7 @@ jobs:
           REDIS_PORT: "6379"
 
       - name: Upload coverage
-        if: matrix.go-version == '1.22'
+        if: matrix.go-version == '1.24'
         uses: actions/upload-artifact@v4
         with:
           name: coverage
@@ -102,7 +102,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        go-version: ["1.22", "1.23"]
+        go-version: ["1.24"]
     steps:
       - name: Checkout
         uses: actions/checkout@v4

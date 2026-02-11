@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"go.temporal.io/api/enums/v1"
-	"go.temporal.io/api/operatorservice/v1"
-	"go.temporal.io/api/workflowservice/v1"
+	enums "go.temporal.io/api/enums/v1"
+	operatorservice "go.temporal.io/api/operatorservice/v1"
+	workflowservice "go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
 	"google.golang.org/protobuf/types/known/durationpb"

@@ -679,13 +679,11 @@ func readAndParseObject(ctx context.Context, client *s3.Client, cfg *S3Config, o
 	}
 }
 
-// parseJSONObject parses a JSON or JSON Lines file into records.
+// parseJSONObject parses a JSON or JSON Lines file into records using streaming
+// decoding to avoid loading the entire file into memory at once.
 func parseJSONObject(reader io.Reader, key, lastModified string) ([]protocol.Record, error) {
-	data, err := io.ReadAll(reader)
-	if err != nil {
-		return nil, fmt.Errorf("read JSON object: %w", err)
-	}
-	trimmed := bytes.TrimSpace(data)
+	// Use a buffered reader so we can peek at the first byte to determine format.
+	br := bufio.NewReaderSize(reader, 64*1024)
 	var records []protocol.Record
 
 	addMetadata := func(m map[string]interface{}) {
@@ -693,35 +691,35 @@ func parseJSONObject(reader io.Reader, key, lastModified string) ([]protocol.Rec
 		m["_s3_last_modified"] = lastModified
 	}
 
-	if len(trimmed) > 0 && trimmed[0] == '[' {
-		// JSON array.
-		var arr []map[string]interface{}
-		if err := json.Unmarshal(trimmed, &arr); err != nil {
-			return nil, fmt.Errorf("parse JSON array: %w", err)
+	// Peek at the first non-whitespace byte to detect format.
+	firstByte, err := peekNonWhitespace(br)
+	if err != nil {
+		// Empty or unreadable: return zero records.
+		return records, nil
+	}
+
+	if firstByte == '[' {
+		// JSON array — use streaming token decoder.
+		dec := json.NewDecoder(br)
+		// Read the opening bracket.
+		if _, err := dec.Token(); err != nil {
+			return nil, fmt.Errorf("parse JSON array opening: %w", err)
 		}
-		for _, item := range arr {
-			addMetadata(item)
-			itemBytes, _ := json.Marshal(item)
+		for dec.More() {
+			var obj map[string]interface{}
+			if err := dec.Decode(&obj); err != nil {
+				return nil, fmt.Errorf("parse JSON array element: %w", err)
+			}
+			addMetadata(obj)
+			objBytes, _ := json.Marshal(obj)
 			records = append(records, protocol.Record{
-				Data:      itemBytes,
+				Data:      objBytes,
 				EmittedAt: time.Now().UTC(),
 			})
 		}
-	} else if len(trimmed) > 0 && trimmed[0] == '{' && !bytes.Contains(trimmed, []byte("\n{")) {
-		// Single JSON object.
-		var obj map[string]interface{}
-		if err := json.Unmarshal(trimmed, &obj); err != nil {
-			return nil, fmt.Errorf("parse JSON object: %w", err)
-		}
-		addMetadata(obj)
-		objBytes, _ := json.Marshal(obj)
-		records = append(records, protocol.Record{
-			Data:      objBytes,
-			EmittedAt: time.Now().UTC(),
-		})
 	} else {
-		// JSON Lines (newline-delimited JSON).
-		scanner := bufio.NewScanner(bytes.NewReader(trimmed))
+		// JSON Lines (newline-delimited JSON) or single object — stream line by line.
+		scanner := bufio.NewScanner(br)
 		scanner.Buffer(make([]byte, 0, 1024*1024), 10*1024*1024)
 		for scanner.Scan() {
 			line := bytes.TrimSpace(scanner.Bytes())
@@ -741,6 +739,23 @@ func parseJSONObject(reader io.Reader, key, lastModified string) ([]protocol.Rec
 		}
 	}
 	return records, nil
+}
+
+// peekNonWhitespace reads ahead in the buffered reader until it finds a
+// non-whitespace byte, then unreads so the byte is still consumable.
+func peekNonWhitespace(br *bufio.Reader) (byte, error) {
+	for {
+		b, err := br.ReadByte()
+		if err != nil {
+			return 0, err
+		}
+		if b != ' ' && b != '\t' && b != '\n' && b != '\r' {
+			if unreadErr := br.UnreadByte(); unreadErr != nil {
+				return b, unreadErr
+			}
+			return b, nil
+		}
+	}
 }
 
 // parseCSVObject parses a CSV file into records using column headers as field names.

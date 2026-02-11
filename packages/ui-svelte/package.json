@@ -1,0 +1,23 @@
+{
+  "name": "@flowforge/ui-svelte",
+  "version": "0.1.0",
+  "description": "Svelte adapter for FlowForge UI components",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "svelte": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@flowforge/ui-core": "workspace:*"
+  },
+  "peerDependencies": {
+    "svelte": ">=4.0.0"
+  },
+  "devDependencies": {
+    "svelte": "^4.0.0",
+    "typescript": "^5.5.0"
+  }
+}

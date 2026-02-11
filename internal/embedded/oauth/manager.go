@@ -29,11 +29,12 @@ type OAuthConfig struct {
 
 // OAuthTokens holds the token set returned by an OAuth provider.
 type OAuthTokens struct {
-	AccessToken  string    `json:"access_token"`
-	RefreshToken string    `json:"refresh_token,omitempty"`
-	TokenType    string    `json:"token_type"`
-	ExpiresAt    time.Time `json:"expires_at"`
-	Scopes       []string  `json:"scopes,omitempty"`
+	AccessToken   string    `json:"access_token"`
+	RefreshToken  string    `json:"refresh_token,omitempty"`
+	TokenType     string    `json:"token_type"`
+	ExpiresAt     time.Time `json:"expires_at"`
+	Scopes        []string  `json:"scopes,omitempty"`
+	ConnectorType string    `json:"connector_type,omitempty"`
 }
 
 // IsExpired returns true if the access token has expired or will expire
@@ -77,6 +78,14 @@ func (om *OAuthManager) RegisterConnectorConfig(connectorType string, config OAu
 	om.mu.Lock()
 	om.configs[connectorType] = config
 	om.mu.Unlock()
+}
+
+// GetConfig returns the OAuth configuration for a connector type.
+func (om *OAuthManager) GetConfig(connectorType string) (OAuthConfig, bool) {
+	om.mu.RLock()
+	config, ok := om.configs[connectorType]
+	om.mu.RUnlock()
+	return config, ok
 }
 
 // StoreTokens stores OAuth tokens for an integration.
@@ -174,6 +183,7 @@ func (om *OAuthManager) HandleCallback(ctx context.Context, state, code string) 
 		return nil, fmt.Errorf("exchange code: %w", err)
 	}
 
+	tokens.ConnectorType = flow.connectorType
 	return tokens, nil
 }
 
@@ -191,24 +201,17 @@ func (om *OAuthManager) RefreshToken(ctx context.Context, integrationID string) 
 		return nil, fmt.Errorf("no refresh token available for integration %q", integrationID)
 	}
 
-	// We need to find the OAuth config for this integration's connector type.
-	// Look through all configs to find one with a matching token URL pattern.
-	// In production, this mapping would be stored alongside the tokens.
-	var config OAuthConfig
-	var found bool
+	// Look up the OAuth config using the connector type stored with the tokens.
+	if existing.ConnectorType == "" {
+		return nil, fmt.Errorf("no connector type associated with tokens for integration %q", integrationID)
+	}
 
 	om.mu.RLock()
-	for _, cfg := range om.configs {
-		if cfg.TokenURL != "" {
-			config = cfg
-			found = true
-			break
-		}
-	}
+	config, found := om.configs[existing.ConnectorType]
 	om.mu.RUnlock()
 
 	if !found {
-		return nil, fmt.Errorf("no OAuth config found for token refresh")
+		return nil, fmt.Errorf("no OAuth config registered for connector type %q", existing.ConnectorType)
 	}
 
 	tokens, err := om.doRefresh(ctx, config, existing.RefreshToken)

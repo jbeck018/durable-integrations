@@ -7,48 +7,112 @@ option go_package = "github.com/flowforge/flowforge/proto/flowforge/api/v1";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/struct.proto";
 import "google/protobuf/empty.proto";
+import "google/api/annotations.proto";
 
 // FlowForge API service — manages connectors, connections, syncs, and schemas.
 service FlowForgeService {
   // Connector operations
-  rpc ListConnectors(ListConnectorsRequest) returns (ListConnectorsResponse);
-  rpc GetConnector(GetConnectorRequest) returns (Connector);
-  rpc TestConnection(TestConnectionRequest) returns (TestConnectionResponse);
+  rpc ListConnectors(ListConnectorsRequest) returns (ListConnectorsResponse) {
+    option (google.api.http) = { get: "/api/v1/connectors" };
+  }
+  rpc GetConnector(GetConnectorRequest) returns (Connector) {
+    option (google.api.http) = { get: "/api/v1/connectors/{name}" };
+  }
+  rpc TestConnection(TestConnectionRequest) returns (TestConnectionResponse) {
+    option (google.api.http) = { post: "/api/v1/connectors/test" body: "*" };
+  }
 
   // Connection operations
-  rpc CreateConnection(CreateConnectionRequest) returns (Connection);
-  rpc GetConnection(GetConnectionRequest) returns (Connection);
-  rpc ListConnections(ListConnectionsRequest) returns (ListConnectionsResponse);
-  rpc UpdateConnection(UpdateConnectionRequest) returns (Connection);
-  rpc DeleteConnection(DeleteConnectionRequest) returns (google.protobuf.Empty);
+  rpc CreateConnection(CreateConnectionRequest) returns (Connection) {
+    option (google.api.http) = { post: "/api/v1/connections" body: "*" };
+  }
+  rpc GetConnection(GetConnectionRequest) returns (Connection) {
+    option (google.api.http) = { get: "/api/v1/connections/{id}" };
+  }
+  rpc ListConnections(ListConnectionsRequest) returns (ListConnectionsResponse) {
+    option (google.api.http) = { get: "/api/v1/connections" };
+  }
+  rpc UpdateConnection(UpdateConnectionRequest) returns (Connection) {
+    option (google.api.http) = { put: "/api/v1/connections/{id}" body: "*" };
+  }
+  rpc DeleteConnection(DeleteConnectionRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = { delete: "/api/v1/connections/{id}" };
+  }
 
   // Sync operations
-  rpc CreateSync(CreateSyncRequest) returns (Sync);
-  rpc GetSync(GetSyncRequest) returns (Sync);
-  rpc ListSyncs(ListSyncsRequest) returns (ListSyncsResponse);
-  rpc UpdateSync(UpdateSyncRequest) returns (Sync);
-  rpc DeleteSync(DeleteSyncRequest) returns (google.protobuf.Empty);
-  rpc TriggerSync(TriggerSyncRequest) returns (SyncRun);
-  rpc PauseSync(PauseSyncRequest) returns (google.protobuf.Empty);
-  rpc ResumeSync(ResumeSyncRequest) returns (google.protobuf.Empty);
+  rpc CreateSync(CreateSyncRequest) returns (Sync) {
+    option (google.api.http) = { post: "/api/v1/syncs" body: "*" };
+  }
+  rpc GetSync(GetSyncRequest) returns (Sync) {
+    option (google.api.http) = { get: "/api/v1/syncs/{id}" };
+  }
+  rpc ListSyncs(ListSyncsRequest) returns (ListSyncsResponse) {
+    option (google.api.http) = { get: "/api/v1/syncs" };
+  }
+  rpc UpdateSync(UpdateSyncRequest) returns (Sync) {
+    option (google.api.http) = { put: "/api/v1/syncs/{id}" body: "*" };
+  }
+  rpc DeleteSync(DeleteSyncRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = { delete: "/api/v1/syncs/{id}" };
+  }
+  rpc TriggerSync(TriggerSyncRequest) returns (SyncRun) {
+    option (google.api.http) = { post: "/api/v1/syncs/{sync_id}/trigger" body: "*" };
+  }
+  rpc PauseSync(PauseSyncRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = { post: "/api/v1/syncs/{sync_id}/pause" };
+  }
+  rpc ResumeSync(ResumeSyncRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = { post: "/api/v1/syncs/{sync_id}/resume" };
+  }
 
   // Sync run operations
-  rpc GetSyncRun(GetSyncRunRequest) returns (SyncRun);
-  rpc ListSyncRuns(ListSyncRunsRequest) returns (ListSyncRunsResponse);
+  rpc GetSyncRun(GetSyncRunRequest) returns (SyncRun) {
+    option (google.api.http) = { get: "/api/v1/sync-runs/{id}" };
+  }
+  rpc ListSyncRuns(ListSyncRunsRequest) returns (ListSyncRunsResponse) {
+    option (google.api.http) = { get: "/api/v1/syncs/{sync_id}/runs" };
+  }
 
   // Stream operations
-  rpc DiscoverStreams(DiscoverStreamsRequest) returns (DiscoverStreamsResponse);
-  rpc ListStreams(ListStreamsRequest) returns (ListStreamsResponse);
+  rpc DiscoverStreams(DiscoverStreamsRequest) returns (DiscoverStreamsResponse) {
+    option (google.api.http) = { post: "/api/v1/streams/discover" body: "*" };
+  }
+  rpc ListStreams(ListStreamsRequest) returns (ListStreamsResponse) {
+    option (google.api.http) = { get: "/api/v1/streams" };
+  }
 
   // Schema operations
-  rpc GetSchemaVersions(GetSchemaVersionsRequest) returns (GetSchemaVersionsResponse);
-  rpc CompareSchemas(CompareSchemasRequest) returns (CompareSchemasResponse);
+  rpc GetSchemaVersions(GetSchemaVersionsRequest) returns (GetSchemaVersionsResponse) {
+    option (google.api.http) = { get: "/api/v1/schemas/versions" };
+  }
+  rpc CompareSchemas(CompareSchemasRequest) returns (CompareSchemasResponse) {
+    option (google.api.http) = { get: "/api/v1/schemas/compare" };
+  }
 
   // Field mapping operations
-  rpc CreateFieldMapping(CreateFieldMappingRequest) returns (FieldMapping);
-  rpc GetFieldMapping(GetFieldMappingRequest) returns (FieldMapping);
-  rpc UpdateFieldMapping(UpdateFieldMappingRequest) returns (FieldMapping);
-  rpc AutoMapFields(AutoMapFieldsRequest) returns (AutoMapFieldsResponse);
+  rpc CreateFieldMapping(CreateFieldMappingRequest) returns (FieldMapping) {
+    option (google.api.http) = { post: "/api/v1/field-mappings" body: "*" };
+  }
+  rpc GetFieldMapping(GetFieldMappingRequest) returns (FieldMapping) {
+    option (google.api.http) = { get: "/api/v1/field-mappings/{id}" };
+  }
+  rpc UpdateFieldMapping(UpdateFieldMappingRequest) returns (FieldMapping) {
+    option (google.api.http) = { put: "/api/v1/field-mappings/{id}" body: "*" };
+  }
+  rpc AutoMapFields(AutoMapFieldsRequest) returns (AutoMapFieldsResponse) {
+    option (google.api.http) = { post: "/api/v1/field-mappings/auto" body: "*" };
+  }
+
+  // OAuth BFF operations (popup-based OAuth2 flow for embedded UI)
+  rpc OAuthInitiate(OAuthInitiateRequest) returns (OAuthInitiateResponse) {
+    option (google.api.http) = { post: "/api/v1/oauth/initiate" body: "*" };
+  }
+  rpc OAuthStatus(OAuthStatusRequest) returns (OAuthStatusResponse) {
+    option (google.api.http) = { post: "/api/v1/oauth/status" body: "*" };
+  }
+  rpc OAuthReauthorize(OAuthReauthorizeRequest) returns (OAuthInitiateResponse) {
+    option (google.api.http) = { post: "/api/v1/oauth/reauthorize" body: "*" };
+  }
 }
 
 // ─── Connector ─────────────────────────────────────────────
@@ -327,4 +391,29 @@ message AutoMapFieldsRequest {
 message AutoMapFieldsResponse {
   repeated FieldMap suggested_mappings = 1;
   double confidence = 2;
+}
+
+// ─── OAuth BFF ──────────────────────────────────────────────
+
+message OAuthInitiateRequest {
+  string connector_id = 1;
+  string tenant_id = 2;
+}
+
+message OAuthInitiateResponse {
+  string session_id = 1;
+  string authorize_url = 2;
+}
+
+message OAuthStatusRequest {
+  string connection_id = 1;
+}
+
+message OAuthStatusResponse {
+  bool valid = 1;
+}
+
+message OAuthReauthorizeRequest {
+  string connection_id = 1;
+  string tenant_id = 2;
 }

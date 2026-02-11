@@ -247,7 +247,7 @@ func passwordAuth(ctx context.Context, cfg *SnowflakeConfig) (string, error) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := snowflakeHTTPClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("login request failed: %w", err)
 	}
@@ -336,7 +336,7 @@ func executeStatement(ctx context.Context, cfg *SnowflakeConfig, token, sql stri
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("X-Snowflake-Authorization-Token-Type", tokenType(cfg))
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := snowflakeHTTPClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("execute statement: %w", err)
 	}
@@ -374,12 +374,25 @@ func tokenType(cfg *SnowflakeConfig) string {
 	return "SNOWFLAKE_TOKEN"
 }
 
-// pollStatementResult polls for async statement completion.
+// maxPollDuration is the maximum time to poll for a Snowflake async statement.
+const maxPollDuration = 2 * time.Hour
+
+// snowflakeHTTPClient is a configured HTTP client for Snowflake API calls,
+// replacing http.DefaultClient to ensure proper timeouts.
+var snowflakeHTTPClient = &http.Client{
+	Timeout: 60 * time.Second,
+}
+
+// pollStatementResult polls for async statement completion with a timeout.
 func pollStatementResult(ctx context.Context, cfg *SnowflakeConfig, token, handle string) (*sfStatementResponse, error) {
 	checkURL := fmt.Sprintf("%s/statements/%s", cfg.apiBaseURL(), handle)
+	deadline := time.Now().Add(maxPollDuration)
 	for {
 		if err := ctx.Err(); err != nil {
 			return nil, err
+		}
+		if time.Now().After(deadline) {
+			return nil, fmt.Errorf("statement %s timed out after %v", handle, maxPollDuration)
 		}
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, checkURL, nil)
 		if err != nil {
@@ -388,7 +401,7 @@ func pollStatementResult(ctx context.Context, cfg *SnowflakeConfig, token, handl
 		setAuthHeader(req, cfg, token)
 		req.Header.Set("Accept", "application/json")
 
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := snowflakeHTTPClient.Do(req)
 		if err != nil {
 			return nil, err
 		}
@@ -430,7 +443,7 @@ func fetchPartitionedResults(ctx context.Context, cfg *SnowflakeConfig, token, h
 	setAuthHeader(req, cfg, token)
 	req.Header.Set("Accept", "application/json")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := snowflakeHTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

@@ -34,6 +34,7 @@ type Server struct {
 	FieldMappingHandlers *FieldMappingHandlers
 	SchemaHandlers       *SchemaHandlers
 	MCPHandlers          *MCPHandlers
+	OAuthHandlers        *OAuthHandlers
 	HealthHandler        *HealthHandler
 
 	// Optional auth middleware — set before calling RegisterRoutes.
@@ -160,6 +161,13 @@ func (s *Server) RegisterRoutes() {
 		api.Route("/mcp", func(r chi.Router) {
 			if s.MCPHandlers != nil {
 				s.MCPHandlers.Routes(r)
+			}
+		})
+
+		// OAuth BFF endpoints for popup-based OAuth2 flows.
+		api.Route("/oauth", func(r chi.Router) {
+			if s.OAuthHandlers != nil {
+				s.OAuthHandlers.Routes(r)
 			}
 		})
 	})

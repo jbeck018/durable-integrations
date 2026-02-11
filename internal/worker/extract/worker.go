@@ -10,6 +10,9 @@ import (
 	"sync"
 	"time"
 
+	"go.temporal.io/sdk/activity"
+
+	restcommon "github.com/flowforge/flowforge/connectors/common"
 	"github.com/flowforge/flowforge/internal/common"
 	"github.com/flowforge/flowforge/pkg/cdk"
 	"github.com/flowforge/flowforge/pkg/protocol"
@@ -22,6 +25,10 @@ type ExtractWorker struct {
 	batchSize      int
 	readTimeout    time.Duration
 	rateLimitDelay time.Duration
+
+	// DistRateLimiter is an optional distributed rate limiter (e.g. Redis-backed)
+	// injected at worker initialization for multi-worker rate limit enforcement.
+	DistRateLimiter restcommon.DistributedRateLimiter
 
 	mu        sync.Mutex
 	isRunning bool
@@ -88,13 +95,27 @@ func (w *ExtractWorker) ProcessBatch(
 	}()
 
 	messages := make([]protocol.Message, 0, w.batchSize)
+
+	// Heartbeat every 30s so Temporal knows the activity is alive.
+	heartbeatTicker := time.NewTicker(30 * time.Second)
+	defer heartbeatTicker.Stop()
+
 	for msg := range output {
 		if msg.Control != nil {
 			w.handleControl(readCtx, msg.Control)
 			continue
 		}
 		messages = append(messages, msg)
-		// Yield a batch-sized slice when full; keep collecting.
+
+		// Non-blocking heartbeat check.
+		select {
+		case <-heartbeatTicker.C:
+			activity.RecordHeartbeat(ctx, map[string]interface{}{
+				"records_read": len(messages),
+				"connector":    connectorName,
+			})
+		default:
+		}
 	}
 
 	readDone.Wait()

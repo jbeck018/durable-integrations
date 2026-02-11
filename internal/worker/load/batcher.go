@@ -5,6 +5,8 @@ package load
 
 import (
 	"errors"
+	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -18,11 +20,12 @@ type Batcher struct {
 	flushInterval time.Duration
 	flushFn       func([]protocol.Record) error
 
-	mu      sync.Mutex
-	buffer  []protocol.Record
-	closed  bool
-	done    chan struct{}
-	timer   *time.Timer
+	mu       sync.Mutex
+	buffer   []protocol.Record
+	closed   bool
+	done     chan struct{}
+	timer    *time.Timer
+	lastErr  error // last error from timer-triggered flush
 }
 
 // NewBatcher creates a Batcher that flushes when maxSize records accumulate
@@ -46,12 +49,20 @@ func NewBatcher(maxSize int, flushInterval time.Duration, flushFn func([]protoco
 }
 
 // Add appends a record to the buffer. When the buffer reaches maxSize, a
-// synchronous flush is triggered.
+// synchronous flush is triggered. If a previous timer-triggered flush failed,
+// that error is returned and cleared.
 func (b *Batcher) Add(record protocol.Record) error {
 	b.mu.Lock()
 	if b.closed {
 		b.mu.Unlock()
 		return errors.New("batcher is closed")
+	}
+	// Surface any error from a prior timer-triggered flush.
+	if b.lastErr != nil {
+		err := b.lastErr
+		b.lastErr = nil
+		b.mu.Unlock()
+		return fmt.Errorf("previous timer flush failed: %w", err)
 	}
 	b.buffer = append(b.buffer, record)
 	if len(b.buffer) >= b.maxSize {
@@ -130,7 +141,10 @@ func (b *Batcher) timerFlush() {
 	}
 	batch := b.drainLocked()
 	b.mu.Unlock()
-	// Ignore the error from timer-triggered flushes; the next explicit Flush
-	// or Add will surface errors.
-	_ = b.flushFn(batch)
+	if err := b.flushFn(batch); err != nil {
+		slog.Error("batcher: timer-triggered flush failed", "error", err, "batch_size", len(batch))
+		b.mu.Lock()
+		b.lastErr = err
+		b.mu.Unlock()
+	}
 }

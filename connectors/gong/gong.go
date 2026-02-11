@@ -21,6 +21,7 @@ const (
 	baseURL          = "https://api.gong.io"
 	connectorName    = "gong"
 	connectorVersion = "1.0.0"
+	dailyLimit       = 10000 // Gong API daily request limit
 )
 
 // streamDefs maps stream names to their Gong API endpoint details.
@@ -99,8 +100,22 @@ func parseGongConfig(raw json.RawMessage) (*gongConfig, error) {
 	return &cfg, nil
 }
 
+// DailyLimiter tracks daily API request counts. Implementations should use a
+// shared store (e.g. Redis) so that all workers for the same tenant share one
+// counter that resets at midnight UTC.
+type DailyLimiter interface {
+	// Increment adds delta to today's counter and returns the new total.
+	// Returns an error if the daily limit would be exceeded.
+	Increment(ctx context.Context, key string, delta int, limit int) (int, error)
+}
+
 // Connector implements cdk.Source for Gong.
-type Connector struct{}
+type Connector struct {
+	// DailyLimiter is an optional daily request counter. When set, every API
+	// request increments the counter and requests are rejected once the daily
+	// limit is reached.
+	DailyLimiter DailyLimiter
+}
 
 func (c *Connector) buildClient(cfg *gongConfig) *restcommon.RESTClient {
 	// Gong uses HTTP Basic Auth with access_key:access_secret.
@@ -110,6 +125,19 @@ func (c *Connector) buildClient(cfg *gongConfig) *restcommon.RESTClient {
 		restcommon.WithRetry(3, 500*time.Millisecond),
 		restcommon.WithRateLimit(3),
 	)
+}
+
+// checkDailyLimit increments the daily counter and returns an error if the
+// limit has been exceeded. If no DailyLimiter is configured, it is a no-op.
+func (c *Connector) checkDailyLimit(ctx context.Context) error {
+	if c.DailyLimiter == nil {
+		return nil
+	}
+	count, err := c.DailyLimiter.Increment(ctx, "gong:daily", 1, dailyLimit)
+	if err != nil {
+		return fmt.Errorf("gong daily limit exceeded (%d/%d): %w", count, dailyLimit, err)
+	}
+	return nil
 }
 
 // Spec returns the connector's configuration JSON Schema.
@@ -266,6 +294,9 @@ func (c *Connector) readViaPOST(ctx context.Context, client *restcommon.RESTClie
 			body["cursor"] = cursor
 		}
 
+		if err := c.checkDailyLimit(ctx); err != nil {
+			return err
+		}
 		resp, err := client.Post(ctx, def.listPath, body)
 		if err != nil {
 			return fmt.Errorf("POST %s: %w", def.listPath, err)
@@ -339,6 +370,9 @@ func (c *Connector) readViaGET(ctx context.Context, client *restcommon.RESTClien
 			path += sep + "cursor=" + cursor
 		}
 
+		if err := c.checkDailyLimit(ctx); err != nil {
+			return err
+		}
 		resp, err := client.Get(ctx, path)
 		if err != nil {
 			return fmt.Errorf("GET %s: %w", path, err)
@@ -411,5 +445,5 @@ func init() {
 		DisplayName: "Gong",
 		Version:     connectorVersion,
 		Category:    "Sales Intelligence",
-	}, &Connector{})
+	}, &Connector{}) // DailyLimiter is nil by default; injected by worker at runtime
 }

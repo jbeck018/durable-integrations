@@ -9,6 +9,9 @@ import (
 	"sync"
 	"time"
 
+	"go.temporal.io/sdk/activity"
+
+	restcommon "github.com/flowforge/flowforge/connectors/common"
 	"github.com/flowforge/flowforge/internal/common"
 	"github.com/flowforge/flowforge/pkg/cdk"
 	"github.com/flowforge/flowforge/pkg/protocol"
@@ -29,6 +32,10 @@ type LoadWorker struct {
 	maxRetries  int
 	baseDelay   time.Duration
 	maxDelay    time.Duration
+
+	// DistRateLimiter is an optional distributed rate limiter (e.g. Redis-backed)
+	// injected at worker initialization for multi-worker rate limit enforcement.
+	DistRateLimiter restcommon.DistributedRateLimiter
 
 	mu         sync.Mutex
 	deadLetter []DeadLetterRecord
@@ -70,13 +77,28 @@ func (lw *LoadWorker) ProcessBatch(
 
 	totalResult := &protocol.WriteResult{}
 
-	// Process in batches.
+	// Process in batches. Heartbeat progress to Temporal every 30s.
+	heartbeatTicker := time.NewTicker(30 * time.Second)
+	defer heartbeatTicker.Stop()
+	recordsWritten := int64(0)
+
 	for start := 0; start < len(records); start += lw.batchSize {
 		end := start + lw.batchSize
 		if end > len(records) {
 			end = len(records)
 		}
 		batch := records[start:end]
+
+		// Non-blocking heartbeat before each batch write.
+		select {
+		case <-heartbeatTicker.C:
+			activity.RecordHeartbeat(ctx, map[string]interface{}{
+				"records_written": recordsWritten,
+				"records_total":   len(records),
+				"connector":       connectorName,
+			})
+		default:
+		}
 
 		result, batchErr := lw.writeBatchWithRetry(ctx, dest, config, catalog, batch)
 		if batchErr != nil {
@@ -90,6 +112,7 @@ func (lw *LoadWorker) ProcessBatch(
 		}
 
 		totalResult.RecordsWritten += result.RecordsWritten
+		recordsWritten += result.RecordsWritten
 		totalResult.StateMessages = append(totalResult.StateMessages, result.StateMessages...)
 
 		// Process per-record errors and send failed records to dead letter.

@@ -20,9 +20,17 @@ import (
 // derived key to the FlowForge encryption purpose.
 var hkdfInfo = []byte("flowforge-field-encryption-v1")
 
-// hkdfSalt is a fixed salt for HKDF. In production, consider making this
-// configurable or deriving it from a tenant-specific value.
+// hkdfSalt is the default salt for HKDF key derivation. Override via
+// SetHKDFSalt during service initialization if a custom salt is needed.
 var hkdfSalt = []byte("flowforge-hkdf-salt-v1")
+
+// SetHKDFSalt overrides the default HKDF salt. Must be called before any
+// Encryptor is created. Typically set from FLOWFORGE_HKDF_SALT env var.
+func SetHKDFSalt(salt []byte) {
+	if len(salt) > 0 {
+		hkdfSalt = salt
+	}
+}
 
 // Encryptor provides AES-256-GCM encryption and decryption with HKDF-derived keys.
 // It is safe for concurrent use.

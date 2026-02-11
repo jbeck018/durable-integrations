@@ -6,12 +6,15 @@ package orchestration
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/operatorservice/v1"
+	"go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/temporal"
+	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/flowforge/flowforge/internal/common"
 	"github.com/flowforge/flowforge/internal/orchestration/workflows"
@@ -30,6 +33,11 @@ const (
 type TemporalClient struct {
 	client    client.Client
 	namespace string
+
+	// Per-tenant client cache for tenant-isolated namespaces.
+	tenantMu      sync.RWMutex
+	tenantClients map[string]client.Client
+	hostPort      string
 }
 
 // NewTemporalClient creates a new TemporalClient connected to the Temporal server
@@ -46,8 +54,10 @@ func NewTemporalClient(cfg *common.Config) (*TemporalClient, error) {
 	}
 
 	return &TemporalClient{
-		client:    c,
-		namespace: cfg.TemporalNamespace,
+		client:        c,
+		namespace:     cfg.TemporalNamespace,
+		tenantClients: make(map[string]client.Client),
+		hostPort:      cfg.TemporalAddr(),
 	}, nil
 }
 
@@ -226,4 +236,135 @@ func WorkflowIDForScheduledSync(tenantID, syncID string) string {
 // WorkflowIDForBidirectionalSync builds a deterministic workflow ID for a bidirectional sync.
 func WorkflowIDForBidirectionalSync(tenantID, syncID string) string {
 	return fmt.Sprintf("bidi-sync-%s-%s", tenantID, syncID)
+}
+
+// TenantNamespace returns the Temporal namespace for a given tenant.
+func TenantNamespace(tenantID string) string {
+	return fmt.Sprintf("tenant-%s", tenantID)
+}
+
+// EnsureTenantNamespace registers a Temporal namespace for the tenant if it
+// doesn't already exist. This should be called during tenant provisioning.
+func (tc *TemporalClient) EnsureTenantNamespace(ctx context.Context, tenantID string) error {
+	ns := TenantNamespace(tenantID)
+
+	_, err := tc.client.WorkflowService().RegisterNamespace(ctx, &workflowservice.RegisterNamespaceRequest{
+		Namespace:                        ns,
+		WorkflowExecutionRetentionPeriod: durationpb.New(7 * 24 * time.Hour),
+		Description:                      fmt.Sprintf("FlowForge tenant namespace for %s", tenantID),
+	})
+	if err != nil {
+		// Namespace may already exist — treat "already exists" as success.
+		if isNamespaceAlreadyExistsError(err) {
+			return nil
+		}
+		return fmt.Errorf("register tenant namespace %s: %w", ns, err)
+	}
+
+	return nil
+}
+
+// ClientForTenant returns a Temporal SDK client connected to the tenant's
+// dedicated namespace. Clients are cached for reuse.
+func (tc *TemporalClient) ClientForTenant(tenantID string) (client.Client, error) {
+	ns := TenantNamespace(tenantID)
+
+	// Fast path: cached client.
+	tc.tenantMu.RLock()
+	c, ok := tc.tenantClients[tenantID]
+	tc.tenantMu.RUnlock()
+	if ok {
+		return c, nil
+	}
+
+	// Slow path: create new client for tenant namespace.
+	c, err := client.Dial(client.Options{
+		HostPort:  tc.hostPort,
+		Namespace: ns,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("dial tenant namespace %s: %w", ns, err)
+	}
+
+	tc.tenantMu.Lock()
+	// Double-check: another goroutine may have created it.
+	if existing, ok := tc.tenantClients[tenantID]; ok {
+		tc.tenantMu.Unlock()
+		c.Close()
+		return existing, nil
+	}
+	tc.tenantClients[tenantID] = c
+	tc.tenantMu.Unlock()
+
+	return c, nil
+}
+
+// StartTenantSyncWorkflow starts a sync workflow in the tenant's dedicated
+// Temporal namespace, providing workflow isolation between tenants.
+func (tc *TemporalClient) StartTenantSyncWorkflow(ctx context.Context, params workflows.SyncParams) (client.WorkflowRun, error) {
+	tenantClient, err := tc.ClientForTenant(params.TenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	workflowID := fmt.Sprintf("sync-%s-%s", params.TenantID, params.SyncID)
+
+	opts := client.StartWorkflowOptions{
+		ID:        workflowID,
+		TaskQueue: workflows.SyncTaskQueue,
+		SearchAttributes: map[string]interface{}{
+			SearchAttrTenantID:      params.TenantID,
+			SearchAttrSyncID:        params.SyncID,
+			SearchAttrConnectorType: params.SourceConnectorID,
+			SearchAttrSyncPhase:     string(workflows.PhaseInitializing),
+		},
+		WorkflowExecutionTimeout: 24 * time.Hour,
+		WorkflowTaskTimeout:      time.Minute,
+		RetryPolicy: &temporal.RetryPolicy{
+			InitialInterval:    time.Second,
+			BackoffCoefficient: 2.0,
+			MaximumInterval:    5 * time.Minute,
+			MaximumAttempts:    3,
+		},
+	}
+
+	run, err := tenantClient.ExecuteWorkflow(ctx, opts, workflows.SyncOrchestratorName, params)
+	if err != nil {
+		return nil, fmt.Errorf("start tenant sync workflow %s: %w", workflowID, err)
+	}
+
+	return run, nil
+}
+
+// CloseAllTenantClients closes all cached per-tenant Temporal clients.
+// Call this during shutdown.
+func (tc *TemporalClient) CloseAllTenantClients() {
+	tc.tenantMu.Lock()
+	defer tc.tenantMu.Unlock()
+
+	for id, c := range tc.tenantClients {
+		c.Close()
+		delete(tc.tenantClients, id)
+	}
+}
+
+// isNamespaceAlreadyExistsError checks if the error indicates the namespace
+// already exists (which is safe to ignore).
+func isNamespaceAlreadyExistsError(err error) bool {
+	if err == nil {
+		return false
+	}
+	// Temporal returns a specific status code for already-exists errors.
+	// The error message contains "already exists" in the gRPC status.
+	errStr := err.Error()
+	for _, substr := range []string{"already exists", "AlreadyExists", "ALREADY_EXISTS"} {
+		if len(errStr) >= len(substr) {
+			for i := 0; i <= len(errStr)-len(substr); i++ {
+				if errStr[i:i+len(substr)] == substr {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }

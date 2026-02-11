@@ -118,10 +118,21 @@ func (cfg *zdConfig) baseURL() string {
 // Connector implements cdk.Bidirectional for Zendesk.
 type Connector struct{}
 
+// buildClient creates a RESTClient for general Zendesk API calls (10 req/s).
 func (c *Connector) buildClient(ctx context.Context, cfg *zdConfig) *restcommon.RESTClient {
+	return c.buildClientWithRate(ctx, cfg, 10)
+}
+
+// buildIncrementalClient creates a RESTClient for incremental export endpoints
+// which have a stricter limit of 10 requests per minute.
+func (c *Connector) buildIncrementalClient(ctx context.Context, cfg *zdConfig) *restcommon.RESTClient {
+	return c.buildClientWithRate(ctx, cfg, 10.0/60.0) // 10 req/min
+}
+
+func (c *Connector) buildClientWithRate(ctx context.Context, cfg *zdConfig, ratePerSec float64) *restcommon.RESTClient {
 	opts := []restcommon.ClientOption{
 		restcommon.WithRetry(3, 500*time.Millisecond),
-		restcommon.WithRateLimit(10),
+		restcommon.WithRateLimit(ratePerSec),
 	}
 	if cfg.OAuth != nil {
 		if cfg.OAuth.TokenURL == "" {
@@ -240,7 +251,7 @@ func (c *Connector) Read(ctx context.Context, config json.RawMessage, catalog *p
 			continue
 		}
 
-		if err := c.readStream(ctx, client, cs, def, state, output); err != nil {
+		if err := c.readStream(ctx, cfg, client, cs, def, state, output); err != nil {
 			output <- protocol.Message{
 				Type: protocol.MessageTypeLog,
 				Log: &protocol.Log{
@@ -254,9 +265,10 @@ func (c *Connector) Read(ctx context.Context, config json.RawMessage, catalog *p
 	return nil
 }
 
-func (c *Connector) readStream(ctx context.Context, client *restcommon.RESTClient, cs protocol.ConfiguredStream, def zdStreamDef, state map[string]json.RawMessage, output chan<- protocol.Message) error {
+func (c *Connector) readStream(ctx context.Context, cfg *zdConfig, client *restcommon.RESTClient, cs protocol.ConfiguredStream, def zdStreamDef, state map[string]json.RawMessage, output chan<- protocol.Message) error {
 	if cs.SyncMode == protocol.SyncModeIncremental && def.supportsIncremental {
-		return c.readIncremental(ctx, client, cs, def, state, output)
+		incrClient := c.buildIncrementalClient(ctx, cfg)
+		return c.readIncremental(ctx, incrClient, cs, def, state, output)
 	}
 	return c.readFullRefresh(ctx, client, cs, def, output)
 }

@@ -27,7 +27,7 @@ const (
 	connectorVersion = "1.0.0"
 	zoomAPIBase      = "https://api.zoom.us/v2"
 	zoomTokenURL     = "https://zoom.us/oauth/token"
-	rateLimit        = 10
+	rateLimit        = 8 // Zoom's actual limit is 500/min (~8.3 req/s); use 8 for safety margin
 	maxRetries       = 5
 	retryBaseDelay   = time.Second
 )
@@ -537,7 +537,31 @@ func (z *ZoomConnector) Read(ctx context.Context, config json.RawMessage, catalo
 			return err
 		}
 
-		parentItems, readErr := readZoomStream(ctx, client, cfg, sd, cs, state, output, selected)
+		// Build an onPage callback that processes sub-resources page-by-page,
+		// avoiding accumulation of all parent items into memory.
+		var onPage func([]map[string]interface{})
+		if anySubSelected {
+			onPage = func(pageItems []map[string]interface{}) {
+				for _, sub := range sd.SubResources {
+					subCS, subSel := selectedStreams[sub.Name]
+					if !subSel {
+						continue
+					}
+					if subErr := readSubResource(ctx, client, sub, pageItems, subCS, output); subErr != nil {
+						output <- protocol.Message{
+							Type: protocol.MessageTypeLog,
+							Log: &protocol.Log{
+								Level:     protocol.LogLevelError,
+								Message:   fmt.Sprintf("error reading sub-resource %s: %v", sub.Name, subErr),
+								Timestamp: time.Now().UTC(),
+							},
+						}
+					}
+				}
+			}
+		}
+
+		readErr := readZoomStream(ctx, client, cfg, sd, cs, state, output, selected, onPage)
 		if readErr != nil {
 			output <- protocol.Message{
 				Type: protocol.MessageTypeLog,
@@ -549,37 +573,19 @@ func (z *ZoomConnector) Read(ctx context.Context, config json.RawMessage, catalo
 			}
 			continue
 		}
-
-		// Read sub-resources.
-		for _, sub := range sd.SubResources {
-			subCS, subSelected := selectedStreams[sub.Name]
-			if !subSelected {
-				continue
-			}
-			if subErr := readSubResource(ctx, client, sub, parentItems, subCS, output); subErr != nil {
-				output <- protocol.Message{
-					Type: protocol.MessageTypeLog,
-					Log: &protocol.Log{
-						Level:     protocol.LogLevelError,
-						Message:   fmt.Sprintf("error reading sub-resource %s: %v", sub.Name, subErr),
-						Timestamp: time.Now().UTC(),
-					},
-				}
-			}
-		}
 	}
 	return nil
 }
 
 // readZoomStream reads a top-level Zoom stream with cursor pagination.
-// Returns the raw items for sub-resource resolution.
-func readZoomStream(ctx context.Context, client *zoomClient, cfg *ZoomConfig, sd streamDef, cs protocol.ConfiguredStream, state map[string]json.RawMessage, output chan<- protocol.Message, emitRecords bool) ([]map[string]interface{}, error) {
-	var allItems []map[string]interface{}
+// Instead of accumulating all items into memory, it processes sub-resources
+// page-by-page via the onPage callback and only keeps items for the current page.
+func readZoomStream(ctx context.Context, client *zoomClient, cfg *ZoomConfig, sd streamDef, cs protocol.ConfiguredStream, state map[string]json.RawMessage, output chan<- protocol.Message, emitRecords bool, onPage func(pageItems []map[string]interface{})) error {
 	nextPageToken := ""
 
 	for {
 		if err := ctx.Err(); err != nil {
-			return allItems, err
+			return err
 		}
 
 		params := url.Values{}
@@ -616,12 +622,12 @@ func readZoomStream(ctx context.Context, client *zoomClient, cfg *ZoomConfig, sd
 
 		respBody, err := client.doGet(ctx, sd.Endpoint, params)
 		if err != nil {
-			return allItems, fmt.Errorf("fetch %s: %w", sd.Name, err)
+			return fmt.Errorf("fetch %s: %w", sd.Name, err)
 		}
 
 		var page map[string]json.RawMessage
 		if err := json.Unmarshal(respBody, &page); err != nil {
-			return allItems, fmt.Errorf("decode %s page: %w", sd.Name, err)
+			return fmt.Errorf("decode %s page: %w", sd.Name, err)
 		}
 
 		itemsRaw, hasKey := page[sd.ResponseKey]
@@ -631,12 +637,11 @@ func readZoomStream(ctx context.Context, client *zoomClient, cfg *ZoomConfig, sd
 
 		var items []map[string]interface{}
 		if err := json.Unmarshal(itemsRaw, &items); err != nil {
-			return allItems, fmt.Errorf("decode %s items: %w", sd.Name, err)
+			return fmt.Errorf("decode %s items: %w", sd.Name, err)
 		}
 
 		var lastCursorValue string
 		for _, item := range items {
-			allItems = append(allItems, item)
 			if emitRecords {
 				itemBytes, _ := json.Marshal(item)
 				output <- protocol.Message{
@@ -656,6 +661,11 @@ func readZoomStream(ctx context.Context, client *zoomClient, cfg *ZoomConfig, sd
 					}
 				}
 			}
+		}
+
+		// Process sub-resources for this page immediately, then discard items.
+		if onPage != nil {
+			onPage(items)
 		}
 
 		// Emit state for incremental.
@@ -683,7 +693,7 @@ func readZoomStream(ctx context.Context, client *zoomClient, cfg *ZoomConfig, sd
 		}
 		break
 	}
-	return allItems, nil
+	return nil
 }
 
 // readSubResource reads child resources for each parent item.

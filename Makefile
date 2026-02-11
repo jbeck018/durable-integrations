@@ -61,9 +61,25 @@ lint:
 generate:
 	$(GO) generate ./...
 
-proto:
-	@echo "Generating protobuf code..."
+proto: proto-all
+
+proto-all: proto-go proto-ts proto-openapi proto-zod
+
+proto-go:
+	@echo "Generating Go protobuf + Connect-Go code..."
 	buf generate
+
+proto-ts:
+	@echo "Generating TypeScript types + Connect client stubs..."
+	buf generate
+
+proto-openapi:
+	@echo "Generating OpenAPI spec..."
+	buf generate
+
+proto-zod:
+	@echo "Generating Zod schemas from OpenAPI..."
+	./scripts/generate-zod.sh
 
 # ─── Docker ──────────────────────────────────────────────────
 docker-build:
@@ -88,3 +104,6 @@ dev-setup:
 	$(GO) install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 	$(GO) install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@latest
 	$(GO) install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@latest
+	$(GO) install connectrpc.com/connect/cmd/protoc-gen-connect-go@latest
+	@echo "Installing TypeScript proto codegen plugins..."
+	cd packages/proto-ts && npm install

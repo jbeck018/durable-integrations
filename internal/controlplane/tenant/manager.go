@@ -32,13 +32,16 @@ type ResourceQuotas struct {
 
 // Tenant represents a FlowForge tenant with quotas and metadata.
 type Tenant struct {
-	ID        string         `json:"id"`
-	Name      string         `json:"name"`
-	Namespace string         `json:"namespace"`
-	Quotas    ResourceQuotas `json:"quotas"`
-	Status    TenantStatus   `json:"status"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
+	ID              string         `json:"id"`
+	Name            string         `json:"name"`
+	Namespace       string         `json:"namespace"`
+	Quotas          ResourceQuotas `json:"quotas"`
+	Status          TenantStatus   `json:"status"`
+	NeonProjectID   string         `json:"neon_project_id,omitempty"`
+	Region          string         `json:"region,omitempty"`
+	DBSchemaVersion int            `json:"db_schema_version,omitempty"`
+	CreatedAt       time.Time      `json:"created_at"`
+	UpdatedAt       time.Time      `json:"updated_at"`
 }
 
 // TenantRepository provides persistence operations for tenants.
@@ -55,13 +58,17 @@ type TenantRepository interface {
 
 // TenantRecord is the database representation of a tenant.
 type TenantRecord struct {
-	ID             string          `json:"id"`
-	Name           string          `json:"name"`
-	Namespace      string          `json:"namespace"`
-	Config         json.RawMessage `json:"config"`
-	ResourceQuotas json.RawMessage `json:"resource_quotas"`
-	CreatedAt      time.Time       `json:"created_at"`
-	UpdatedAt      time.Time       `json:"updated_at"`
+	ID                     string          `json:"id"`
+	Name                   string          `json:"name"`
+	Namespace              string          `json:"namespace"`
+	Config                 json.RawMessage `json:"config"`
+	ResourceQuotas         json.RawMessage `json:"resource_quotas"`
+	NeonProjectID          string          `json:"neon_project_id,omitempty"`
+	ConnectionURIEncrypted string          `json:"connection_uri_encrypted,omitempty"`
+	Region                 string          `json:"region,omitempty"`
+	DBSchemaVersion        int             `json:"db_schema_version"`
+	CreatedAt              time.Time       `json:"created_at"`
+	UpdatedAt              time.Time       `json:"updated_at"`
 }
 
 // TenantCache provides caching for tenant data.
@@ -71,21 +78,30 @@ type TenantCache interface {
 	Invalidate(ctx context.Context, tenantID string) error
 }
 
-// TenantManager manages the full lifecycle of tenants including
-// creation, quota enforcement, and status management.
-type TenantManager struct {
-	repo   TenantRepository
-	cache  TenantCache
-	logger *logging.Logger
+// DatabaseProvisioner provisions and deprovisions isolated databases for tenants.
+type DatabaseProvisioner interface {
+	ProvisionDatabase(ctx context.Context, tenantID, tenantName string) (*TenantDatabase, error)
+	DeprovisionDatabase(ctx context.Context, projectID string) error
+	GetConnectionURI(ctx context.Context, projectID string) (string, error)
 }
 
-// NewTenantManager creates a TenantManager. The cache parameter may be nil
-// if caching is not desired.
-func NewTenantManager(repo TenantRepository, cache TenantCache) *TenantManager {
+// TenantManager manages the full lifecycle of tenants including
+// creation, quota enforcement, database isolation, and status management.
+type TenantManager struct {
+	repo        TenantRepository
+	cache       TenantCache
+	provisioner DatabaseProvisioner
+	logger      *logging.Logger
+}
+
+// NewTenantManager creates a TenantManager. The cache and provisioner
+// parameters may be nil if caching or database isolation is not desired.
+func NewTenantManager(repo TenantRepository, cache TenantCache, provisioner DatabaseProvisioner) *TenantManager {
 	return &TenantManager{
-		repo:   repo,
-		cache:  cache,
-		logger: logging.Global().WithField("component", "tenant_manager"),
+		repo:        repo,
+		cache:       cache,
+		provisioner: provisioner,
+		logger:      logging.Global().WithField("component", "tenant_manager"),
 	}
 }
 
@@ -138,9 +154,35 @@ func (tm *TenantManager) CreateTenant(ctx context.Context, name, namespace strin
 
 	tenant := recordToTenant(created)
 
+	// Provision an isolated Neon database if a provisioner is configured.
+	if tm.provisioner != nil {
+		dbInfo, provErr := tm.provisioner.ProvisionDatabase(ctx, tenant.ID, tenant.Name)
+		if provErr != nil {
+			tm.logger.WithContext(ctx).Error("failed to provision tenant database",
+				"tenant_id", tenant.ID,
+				"error", provErr,
+			)
+			// Store tenant record with a note that provisioning failed.
+			// The caller can retry provisioning later.
+		} else {
+			tenant.NeonProjectID = dbInfo.ProjectID
+			tenant.Region = dbInfo.Region
+
+			// Update the tenant record with Neon project details.
+			// In production, encrypt the connection URI before storing.
+			if updateErr := tm.updateDatabaseInfo(ctx, tenant.ID, dbInfo); updateErr != nil {
+				tm.logger.WithContext(ctx).Error("failed to store tenant database info",
+					"tenant_id", tenant.ID,
+					"error", updateErr,
+				)
+			}
+		}
+	}
+
 	tm.logger.WithContext(ctx).Info("tenant created",
 		"tenant_id", tenant.ID,
 		"namespace", tenant.Namespace,
+		"neon_project_id", tenant.NeonProjectID,
 	)
 
 	return tenant, nil
@@ -291,6 +333,47 @@ func (tm *TenantManager) CheckQuota(ctx context.Context, tenantID, resource stri
 	return nil
 }
 
+// TemporalNamespace returns the Temporal namespace for a tenant.
+// Each tenant gets its own namespace to prevent workflow interference.
+func TemporalNamespace(tenantID string) string {
+	return fmt.Sprintf("tenant-%s", tenantID)
+}
+
+// S3Prefix returns the S3 key prefix for a tenant's blob storage.
+// All tenant objects are stored under: tenants/{tenant_id}/
+func S3Prefix(tenantID string) string {
+	return fmt.Sprintf("tenants/%s/", tenantID)
+}
+
+// RedisKeyPrefix returns the Redis key prefix for a tenant.
+// Format: flowforge:{tenant_id}:{purpose}
+func RedisKeyPrefix(tenantID, purpose string) string {
+	return fmt.Sprintf("flowforge:%s:%s:", tenantID, purpose)
+}
+
+// updateDatabaseInfo stores the Neon project details on the tenant record.
+func (tm *TenantManager) updateDatabaseInfo(ctx context.Context, tenantID string, dbInfo *TenantDatabase) error {
+	record, err := tm.repo.GetByID(ctx, tenantID)
+	if err != nil {
+		return fmt.Errorf("get tenant for db info update: %w", err)
+	}
+
+	record.NeonProjectID = dbInfo.ProjectID
+	record.ConnectionURIEncrypted = dbInfo.ConnectionURI
+	record.Region = dbInfo.Region
+
+	if _, err := tm.repo.Update(ctx, record); err != nil {
+		return fmt.Errorf("update tenant db info: %w", err)
+	}
+
+	// Invalidate cache since the tenant record changed.
+	if tm.cache != nil {
+		_ = tm.cache.Invalidate(ctx, tenantID)
+	}
+
+	return nil
+}
+
 // recordToTenant converts a TenantRecord from the database into the
 // domain Tenant type.
 func recordToTenant(r *TenantRecord) *Tenant {
@@ -300,12 +383,15 @@ func recordToTenant(r *TenantRecord) *Tenant {
 	}
 
 	return &Tenant{
-		ID:        r.ID,
-		Name:      r.Name,
-		Namespace: r.Namespace,
-		Quotas:    quotas,
-		Status:    StatusActive,
-		CreatedAt: r.CreatedAt,
-		UpdatedAt: r.UpdatedAt,
+		ID:              r.ID,
+		Name:            r.Name,
+		Namespace:       r.Namespace,
+		Quotas:          quotas,
+		Status:          StatusActive,
+		NeonProjectID:   r.NeonProjectID,
+		Region:          r.Region,
+		DBSchemaVersion: r.DBSchemaVersion,
+		CreatedAt:       r.CreatedAt,
+		UpdatedAt:       r.UpdatedAt,
 	}
 }

@@ -115,7 +115,7 @@ type Connector struct{}
 func (c *Connector) buildClient(ctx context.Context, cfg *icConfig) *restcommon.RESTClient {
 	opts := []restcommon.ClientOption{
 		restcommon.WithRetry(3, 500*time.Millisecond),
-		restcommon.WithRateLimit(8),
+		restcommon.WithRateLimit(15),
 	}
 	if cfg.OAuth != nil {
 		if cfg.OAuth.TokenURL == "" {

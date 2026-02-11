@@ -4,6 +4,7 @@ go 1.24.7
 
 require (
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
+	connectrpc.com/connect v1.19.1 // indirect
 	github.com/99designs/gqlgen v0.17.86 // indirect
 	github.com/agnivade/levenshtein v1.2.1 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.41.1 // indirect

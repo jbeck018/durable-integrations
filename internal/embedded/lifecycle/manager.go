@@ -64,21 +64,104 @@ type IntegrationStatusDetail struct {
 	RecordsTotal int64        `json:"records_total"`
 }
 
-// LifecycleManager manages the full lifecycle of embedded integrations.
-// In production this would be backed by a database; here we use an in-memory
-// store keyed by tenant and integration ID.
-type LifecycleManager struct {
-	mu           sync.RWMutex
-	integrations map[string]*Integration // keyed by integration ID
-	tenantIndex  map[string][]string     // tenant ID -> list of integration IDs
+// IntegrationRepository provides persistence for integration records.
+// Implementations may be in-memory (for development) or database-backed.
+type IntegrationRepository interface {
+	Create(ctx context.Context, integration *Integration) error
+	GetByID(ctx context.Context, id string) (*Integration, error)
+	Update(ctx context.Context, integration *Integration) error
+	ListByTenant(ctx context.Context, tenantID string) ([]*Integration, error)
+	Delete(ctx context.Context, id string) error
 }
 
-// NewLifecycleManager creates a new LifecycleManager.
-func NewLifecycleManager() *LifecycleManager {
-	return &LifecycleManager{
+// LifecycleManager manages the full lifecycle of embedded integrations.
+// It delegates persistence to an IntegrationRepository for database-backed
+// storage in production, or in-memory storage for development.
+type LifecycleManager struct {
+	repo IntegrationRepository
+}
+
+// NewLifecycleManager creates a LifecycleManager with the given repository.
+// Pass NewInMemoryRepository() for development or a database-backed
+// implementation for production.
+func NewLifecycleManager(repo IntegrationRepository) *LifecycleManager {
+	return &LifecycleManager{repo: repo}
+}
+
+// InMemoryRepository is a development-only in-memory implementation of
+// IntegrationRepository. Data is lost on restart.
+type InMemoryRepository struct {
+	mu           sync.RWMutex
+	integrations map[string]*Integration
+	tenantIndex  map[string][]string
+}
+
+// NewInMemoryRepository creates an InMemoryRepository for development use.
+func NewInMemoryRepository() *InMemoryRepository {
+	return &InMemoryRepository{
 		integrations: make(map[string]*Integration),
 		tenantIndex:  make(map[string][]string),
 	}
+}
+
+func (r *InMemoryRepository) Create(_ context.Context, integration *Integration) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.integrations[integration.ID] = integration
+	r.tenantIndex[integration.TenantID] = append(r.tenantIndex[integration.TenantID], integration.ID)
+	return nil
+}
+
+func (r *InMemoryRepository) GetByID(_ context.Context, id string) (*Integration, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	i, ok := r.integrations[id]
+	if !ok {
+		return nil, fmt.Errorf("integration %q not found", id)
+	}
+	cp := *i
+	return &cp, nil
+}
+
+func (r *InMemoryRepository) Update(_ context.Context, integration *Integration) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.integrations[integration.ID] = integration
+	return nil
+}
+
+func (r *InMemoryRepository) ListByTenant(_ context.Context, tenantID string) ([]*Integration, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	ids := r.tenantIndex[tenantID]
+	result := make([]*Integration, 0, len(ids))
+	for _, id := range ids {
+		if i := r.integrations[id]; i != nil && i.Status != StatusDeleted {
+			cp := *i
+			result = append(result, &cp)
+		}
+	}
+	return result, nil
+}
+
+func (r *InMemoryRepository) Delete(_ context.Context, id string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	i, ok := r.integrations[id]
+	if !ok {
+		return fmt.Errorf("integration %q not found", id)
+	}
+	i.Status = StatusDeleted
+	i.UpdatedAt = time.Now().UTC()
+	// Remove from tenant index
+	ids := r.tenantIndex[i.TenantID]
+	for j, tid := range ids {
+		if tid == id {
+			r.tenantIndex[i.TenantID] = append(ids[:j], ids[j+1:]...)
+			break
+		}
+	}
+	return nil
 }
 
 // CreateIntegration creates a new integration for the given tenant. The
@@ -102,11 +185,9 @@ func (lm *LifecycleManager) CreateIntegration(ctx context.Context, tenantID stri
 		UpdatedAt:     now,
 	}
 
-	lm.mu.Lock()
-	defer lm.mu.Unlock()
-
-	lm.integrations[integration.ID] = integration
-	lm.tenantIndex[tenantID] = append(lm.tenantIndex[tenantID], integration.ID)
+	if err := lm.repo.Create(ctx, integration); err != nil {
+		return nil, fmt.Errorf("persist integration: %w", err)
+	}
 
 	return integration, nil
 }
@@ -114,12 +195,9 @@ func (lm *LifecycleManager) CreateIntegration(ctx context.Context, tenantID stri
 // EnableIntegration transitions an integration to the "enabled" state,
 // making it eligible for scheduled syncs.
 func (lm *LifecycleManager) EnableIntegration(ctx context.Context, integrationID string) error {
-	lm.mu.Lock()
-	defer lm.mu.Unlock()
-
-	integration, ok := lm.integrations[integrationID]
-	if !ok {
-		return fmt.Errorf("integration %q not found", integrationID)
+	integration, err := lm.repo.GetByID(ctx, integrationID)
+	if err != nil {
+		return err
 	}
 
 	if integration.Status == StatusDeleted {
@@ -132,18 +210,15 @@ func (lm *LifecycleManager) EnableIntegration(ctx context.Context, integrationID
 	integration.EnabledAt = &now
 	integration.ErrorMessage = ""
 
-	return nil
+	return lm.repo.Update(ctx, integration)
 }
 
 // DisableIntegration transitions an integration to the "disabled" state,
 // pausing any scheduled syncs.
 func (lm *LifecycleManager) DisableIntegration(ctx context.Context, integrationID string) error {
-	lm.mu.Lock()
-	defer lm.mu.Unlock()
-
-	integration, ok := lm.integrations[integrationID]
-	if !ok {
-		return fmt.Errorf("integration %q not found", integrationID)
+	integration, err := lm.repo.GetByID(ctx, integrationID)
+	if err != nil {
+		return err
 	}
 
 	if integration.Status == StatusDeleted {
@@ -153,61 +228,27 @@ func (lm *LifecycleManager) DisableIntegration(ctx context.Context, integrationI
 	integration.Status = StatusDisabled
 	integration.UpdatedAt = time.Now().UTC()
 
-	return nil
+	return lm.repo.Update(ctx, integration)
 }
 
 // DeleteIntegration marks an integration as deleted. This is a soft delete;
 // the integration record is retained for audit purposes.
 func (lm *LifecycleManager) DeleteIntegration(ctx context.Context, integrationID string) error {
-	lm.mu.Lock()
-	defer lm.mu.Unlock()
-
-	integration, ok := lm.integrations[integrationID]
-	if !ok {
-		return fmt.Errorf("integration %q not found", integrationID)
-	}
-
-	integration.Status = StatusDeleted
-	integration.UpdatedAt = time.Now().UTC()
-
-	// Remove from tenant index.
-	ids := lm.tenantIndex[integration.TenantID]
-	for i, id := range ids {
-		if id == integrationID {
-			lm.tenantIndex[integration.TenantID] = append(ids[:i], ids[i+1:]...)
-			break
-		}
-	}
-
-	return nil
+	return lm.repo.Delete(ctx, integrationID)
 }
 
 // GetIntegration returns an integration by ID.
 func (lm *LifecycleManager) GetIntegration(ctx context.Context, integrationID string) (*Integration, error) {
-	lm.mu.RLock()
-	defer lm.mu.RUnlock()
-
-	integration, ok := lm.integrations[integrationID]
-	if !ok {
-		return nil, fmt.Errorf("integration %q not found", integrationID)
-	}
-
-	// Return a copy to prevent mutation.
-	cp := *integration
-	return &cp, nil
+	return lm.repo.GetByID(ctx, integrationID)
 }
 
 // GetStatus returns detailed status for an integration.
 func (lm *LifecycleManager) GetStatus(ctx context.Context, integrationID string) (*IntegrationStatusDetail, error) {
-	lm.mu.RLock()
-	defer lm.mu.RUnlock()
-
-	integration, ok := lm.integrations[integrationID]
-	if !ok {
-		return nil, fmt.Errorf("integration %q not found", integrationID)
+	integration, err := lm.repo.GetByID(ctx, integrationID)
+	if err != nil {
+		return nil, err
 	}
 
-	cp := *integration
 	health := "unknown"
 	switch integration.Status {
 	case StatusEnabled:
@@ -226,7 +267,7 @@ func (lm *LifecycleManager) GetStatus(ctx context.Context, integrationID string)
 	}
 
 	detail := &IntegrationStatusDetail{
-		Integration: &cp,
+		Integration: integration,
 		Health:      health,
 	}
 
@@ -235,7 +276,7 @@ func (lm *LifecycleManager) GetStatus(ctx context.Context, integrationID string)
 		var nextSync time.Time
 		if integration.LastSyncAt != nil {
 			nextSync = integration.LastSyncAt.Add(time.Duration(integration.Config.SyncSchedule.IntervalMinutes) * time.Minute)
-		} else {
+		} else if integration.EnabledAt != nil {
 			nextSync = integration.EnabledAt.Add(time.Duration(integration.Config.SyncSchedule.IntervalMinutes) * time.Minute)
 		}
 		detail.NextSyncAt = &nextSync
@@ -246,29 +287,14 @@ func (lm *LifecycleManager) GetStatus(ctx context.Context, integrationID string)
 
 // ListByTenant returns all non-deleted integrations for a tenant.
 func (lm *LifecycleManager) ListByTenant(ctx context.Context, tenantID string) ([]*Integration, error) {
-	lm.mu.RLock()
-	defer lm.mu.RUnlock()
-
-	ids := lm.tenantIndex[tenantID]
-	result := make([]*Integration, 0, len(ids))
-	for _, id := range ids {
-		integration := lm.integrations[id]
-		if integration != nil && integration.Status != StatusDeleted {
-			cp := *integration
-			result = append(result, &cp)
-		}
-	}
-	return result, nil
+	return lm.repo.ListByTenant(ctx, tenantID)
 }
 
 // RecordSync updates the sync metadata after a successful sync.
 func (lm *LifecycleManager) RecordSync(ctx context.Context, integrationID string, recordsProcessed int64) error {
-	lm.mu.Lock()
-	defer lm.mu.Unlock()
-
-	integration, ok := lm.integrations[integrationID]
-	if !ok {
-		return fmt.Errorf("integration %q not found", integrationID)
+	integration, err := lm.repo.GetByID(ctx, integrationID)
+	if err != nil {
+		return err
 	}
 
 	now := time.Now().UTC()
@@ -276,34 +302,28 @@ func (lm *LifecycleManager) RecordSync(ctx context.Context, integrationID string
 	integration.SyncCount++
 	integration.UpdatedAt = now
 
-	return nil
+	return lm.repo.Update(ctx, integration)
 }
 
 // SetError transitions an integration to the error state with a message.
 func (lm *LifecycleManager) SetError(ctx context.Context, integrationID string, errMsg string) error {
-	lm.mu.Lock()
-	defer lm.mu.Unlock()
-
-	integration, ok := lm.integrations[integrationID]
-	if !ok {
-		return fmt.Errorf("integration %q not found", integrationID)
+	integration, err := lm.repo.GetByID(ctx, integrationID)
+	if err != nil {
+		return err
 	}
 
 	integration.Status = StatusError
 	integration.ErrorMessage = errMsg
 	integration.UpdatedAt = time.Now().UTC()
 
-	return nil
+	return lm.repo.Update(ctx, integration)
 }
 
 // UpdateConfig updates the configuration for an existing integration.
 func (lm *LifecycleManager) UpdateConfig(ctx context.Context, integrationID string, config IntegrationConfig) error {
-	lm.mu.Lock()
-	defer lm.mu.Unlock()
-
-	integration, ok := lm.integrations[integrationID]
-	if !ok {
-		return fmt.Errorf("integration %q not found", integrationID)
+	integration, err := lm.repo.GetByID(ctx, integrationID)
+	if err != nil {
+		return err
 	}
 
 	if integration.Status == StatusDeleted {
@@ -313,5 +333,5 @@ func (lm *LifecycleManager) UpdateConfig(ctx context.Context, integrationID stri
 	integration.Config = config
 	integration.UpdatedAt = time.Now().UTC()
 
-	return nil
+	return lm.repo.Update(ctx, integration)
 }

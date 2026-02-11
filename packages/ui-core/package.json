@@ -1,0 +1,37 @@
+{
+  "name": "@flowforge/ui-core",
+  "version": "0.1.0",
+  "description": "Framework-agnostic core logic for FlowForge UI components",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./state/*": {
+      "import": "./dist/state/*.js",
+      "types": "./dist/state/*.d.ts"
+    },
+    "./logic/*": {
+      "import": "./dist/logic/*.js",
+      "types": "./dist/logic/*.d.ts"
+    },
+    "./auth/*": {
+      "import": "./dist/auth/*.js",
+      "types": "./dist/auth/*.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@flowforge/proto-ts": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}

@@ -18,9 +18,10 @@ import (
 
 // Client wraps an S3 client with a default bucket and simplified operations.
 type Client struct {
-	s3Client     *s3.Client
+	s3Client      *s3.Client
 	presignClient *s3.PresignClient
-	bucket       string
+	bucket        string
+	tenantPrefix  string // Optional: prepended to all keys for tenant isolation
 }
 
 // Object represents metadata about a stored object.
@@ -64,11 +65,31 @@ func NewClient(ctx context.Context, endpoint, region, accessKey, secretKey, buck
 	}, nil
 }
 
+// WithTenantPrefix returns a new Client that prepends the tenant prefix
+// to all key operations. This provides S3 key-level isolation per tenant.
+// The prefix format is: tenants/{tenantID}/
+func (c *Client) WithTenantPrefix(tenantID string) *Client {
+	return &Client{
+		s3Client:      c.s3Client,
+		presignClient: c.presignClient,
+		bucket:        c.bucket,
+		tenantPrefix:  fmt.Sprintf("tenants/%s/", tenantID),
+	}
+}
+
+// tenantKey prepends the tenant prefix to a key if one is set.
+func (c *Client) tenantKey(key string) string {
+	if c.tenantPrefix == "" {
+		return key
+	}
+	return c.tenantPrefix + key
+}
+
 // Upload stores data from reader at the given key with the specified content type.
 func (c *Client) Upload(ctx context.Context, key string, reader io.Reader, contentType string) error {
 	input := &s3.PutObjectInput{
 		Bucket:      aws.String(c.bucket),
-		Key:         aws.String(key),
+		Key:         aws.String(c.tenantKey(key)),
 		Body:        reader,
 		ContentType: aws.String(contentType),
 	}
@@ -90,7 +111,7 @@ func (c *Client) UploadBytes(ctx context.Context, key string, data []byte, conte
 func (c *Client) Download(ctx context.Context, key string) (io.ReadCloser, error) {
 	input := &s3.GetObjectInput{
 		Bucket: aws.String(c.bucket),
-		Key:    aws.String(key),
+		Key:    aws.String(c.tenantKey(key)),
 	}
 
 	result, err := c.s3Client.GetObject(ctx, input)
@@ -104,7 +125,7 @@ func (c *Client) Download(ctx context.Context, key string) (io.ReadCloser, error
 func (c *Client) Delete(ctx context.Context, key string) error {
 	input := &s3.DeleteObjectInput{
 		Bucket: aws.String(c.bucket),
-		Key:    aws.String(key),
+		Key:    aws.String(c.tenantKey(key)),
 	}
 
 	_, err := c.s3Client.DeleteObject(ctx, input)
@@ -123,7 +144,7 @@ func (c *Client) DeleteBatch(ctx context.Context, keys []string) error {
 	objects := make([]types.ObjectIdentifier, len(keys))
 	for i, key := range keys {
 		objects[i] = types.ObjectIdentifier{
-			Key: aws.String(key),
+			Key: aws.String(c.tenantKey(key)),
 		}
 	}
 
@@ -147,7 +168,7 @@ func (c *Client) DeleteBatch(ctx context.Context, keys []string) error {
 func (c *Client) List(ctx context.Context, prefix string, maxKeys int) ([]Object, error) {
 	input := &s3.ListObjectsV2Input{
 		Bucket: aws.String(c.bucket),
-		Prefix: aws.String(prefix),
+		Prefix: aws.String(c.tenantKey(prefix)),
 	}
 	if maxKeys > 0 {
 		input.MaxKeys = aws.Int32(int32(maxKeys))
@@ -185,7 +206,7 @@ func (c *Client) List(ctx context.Context, prefix string, maxKeys int) ([]Object
 func (c *Client) PresignedGetURL(ctx context.Context, key string, expires time.Duration) (string, error) {
 	input := &s3.GetObjectInput{
 		Bucket: aws.String(c.bucket),
-		Key:    aws.String(key),
+		Key:    aws.String(c.tenantKey(key)),
 	}
 
 	result, err := c.presignClient.PresignGetObject(ctx, input, func(po *s3.PresignOptions) {
@@ -202,7 +223,7 @@ func (c *Client) PresignedGetURL(ctx context.Context, key string, expires time.D
 func (c *Client) PresignedPutURL(ctx context.Context, key, contentType string, expires time.Duration) (string, error) {
 	input := &s3.PutObjectInput{
 		Bucket:      aws.String(c.bucket),
-		Key:         aws.String(key),
+		Key:         aws.String(c.tenantKey(key)),
 		ContentType: aws.String(contentType),
 	}
 
@@ -219,7 +240,7 @@ func (c *Client) PresignedPutURL(ctx context.Context, key, contentType string, e
 func (c *Client) Exists(ctx context.Context, key string) (bool, error) {
 	input := &s3.HeadObjectInput{
 		Bucket: aws.String(c.bucket),
-		Key:    aws.String(key),
+		Key:    aws.String(c.tenantKey(key)),
 	}
 
 	_, err := c.s3Client.HeadObject(ctx, input)

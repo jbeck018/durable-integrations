@@ -57,6 +57,9 @@ func (c *BigQueryConfig) validate() error {
 	if c.BatchSize <= 0 {
 		c.BatchSize = defaultBatchSize
 	}
+	if c.BatchSize > defaultBatchSize {
+		c.BatchSize = defaultBatchSize
+	}
 	return nil
 }
 
@@ -541,11 +544,20 @@ func readStream(ctx context.Context, client *http.Client, cfg *BigQueryConfig, c
 	return nil
 }
 
-// waitForJob polls the BigQuery jobs.get endpoint until the job completes.
+// maxJobWaitDuration is the maximum time to wait for a BigQuery job to complete.
+const maxJobWaitDuration = 30 * time.Minute
+
+// waitForJob polls the BigQuery jobs.get endpoint until the job completes or
+// the timeout is reached. The timeout defaults to 30 minutes to prevent
+// infinite polling on stuck jobs.
 func waitForJob(ctx context.Context, client *http.Client, cfg *BigQueryConfig, jobID, location string) error {
+	deadline := time.Now().Add(maxJobWaitDuration)
 	for {
 		if err := ctx.Err(); err != nil {
 			return err
+		}
+		if time.Now().After(deadline) {
+			return fmt.Errorf("job %s timed out after %v", jobID, maxJobWaitDuration)
 		}
 		url := fmt.Sprintf("%s/projects/%s/jobs/%s?location=%s", bqBaseURL, cfg.ProjectID, jobID, location)
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)

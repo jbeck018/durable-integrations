@@ -17,24 +17,37 @@ import (
 	"golang.org/x/oauth2"
 )
 
+// DistributedRateLimiter allows connectors to use a shared (e.g. Redis-backed)
+// rate limiter for multi-worker deployments.
+type DistributedRateLimiter interface {
+	// Wait blocks until the rate limit allows the request or ctx is cancelled.
+	Wait(ctx context.Context) error
+}
+
 // RESTClient is a shared HTTP client that wraps http.Client with automatic
 // retry, rate limiting, authentication, and logging. All REST API connectors
 // should construct one via NewRESTClient and use its Get/Post/Put/Patch/Delete
 // helpers instead of raw http calls.
 type RESTClient struct {
-	client     *http.Client
-	baseURL    string
-	maxRetries int
-	backoff    time.Duration
-	rateLimit  float64 // requests per second; 0 = unlimited
-	apiKey     string
-	apiKeyHdr  string
-	tokenSrc   oauth2.TokenSource
-	logger     *log.Logger
+	client          *http.Client
+	baseURL         string
+	maxRetries      int
+	backoff         time.Duration
+	rateLimit       float64 // requests per second; 0 = unlimited
+	apiKey          string
+	apiKeyHdr       string
+	tokenSrc        oauth2.TokenSource
+	logger          *log.Logger
+	maxResponseSize int64 // max response body size in bytes; 0 = default (50MB)
+	distLimiter     DistributedRateLimiter
+
+	// adaptive rate limiter state
+	adaptiveRate    float64 // current rate for AIMD; 0 = not adaptive
+	adaptiveInitial float64
 
 	// rate limiter state
-	mu       sync.Mutex
-	lastReq  time.Time
+	mu      sync.Mutex
+	lastReq time.Time
 }
 
 // ClientOption configures a RESTClient.
@@ -87,6 +100,35 @@ func WithLogger(l *log.Logger) ClientOption {
 		c.logger = l
 	}
 }
+
+// WithMaxResponseSize sets the maximum response body size in bytes.
+// Responses larger than this limit are rejected to prevent OOM. Default is 50MB.
+func WithMaxResponseSize(bytes int64) ClientOption {
+	return func(c *RESTClient) {
+		c.maxResponseSize = bytes
+	}
+}
+
+// WithAdaptiveRateLimit enables AIMD-style adaptive rate limiting.
+// The rate halves on 429 responses and slowly recovers (additive increase)
+// back toward initialRate.
+func WithAdaptiveRateLimit(initialRate float64) ClientOption {
+	return func(c *RESTClient) {
+		c.adaptiveRate = initialRate
+		c.adaptiveInitial = initialRate
+		c.rateLimit = initialRate
+	}
+}
+
+// WithDistributedRateLimit sets a shared rate limiter (e.g. Redis-backed)
+// that is checked before each request in addition to the local rate limiter.
+func WithDistributedRateLimit(limiter DistributedRateLimiter) ClientOption {
+	return func(c *RESTClient) {
+		c.distLimiter = limiter
+	}
+}
+
+const defaultMaxResponseSize = 50 * 1024 * 1024 // 50MB
 
 // NewRESTClient constructs a RESTClient for the given base URL.
 func NewRESTClient(baseURL string, opts ...ClientOption) *RESTClient {
@@ -175,6 +217,11 @@ func (c *RESTClient) do(ctx context.Context, method, path string, body interface
 		}
 	}
 
+	maxSize := c.maxResponseSize
+	if maxSize <= 0 {
+		maxSize = defaultMaxResponseSize
+	}
+
 	var lastErr error
 	for attempt := 0; attempt <= c.maxRetries; attempt++ {
 		if attempt > 0 {
@@ -183,6 +230,13 @@ func (c *RESTClient) do(ctx context.Context, method, path string, body interface
 			case <-ctx.Done():
 				return nil, ctx.Err()
 			case <-time.After(wait):
+			}
+		}
+
+		// Distributed rate limiter (Redis-backed) check first.
+		if c.distLimiter != nil {
+			if err := c.distLimiter.Wait(ctx); err != nil {
+				return nil, fmt.Errorf("distributed rate limiter: %w", err)
 			}
 		}
 
@@ -216,10 +270,16 @@ func (c *RESTClient) do(ctx context.Context, method, path string, body interface
 			continue
 		}
 
-		respBody, err := io.ReadAll(resp.Body)
+		// Read response with size limit to prevent OOM.
+		limitedReader := io.LimitReader(resp.Body, maxSize+1)
+		respBody, err := io.ReadAll(limitedReader)
 		resp.Body.Close()
 		if err != nil {
 			lastErr = fmt.Errorf("read response: %w", err)
+			continue
+		}
+		if int64(len(respBody)) > maxSize {
+			lastErr = fmt.Errorf("response body exceeds max size (%d bytes)", maxSize)
 			continue
 		}
 
@@ -227,8 +287,9 @@ func (c *RESTClient) do(ctx context.Context, method, path string, body interface
 			c.logger.Printf("[RESTClient] %s %s -> %d (%d bytes)", method, fullURL, resp.StatusCode, len(respBody))
 		}
 
-		// Handle 429 rate limit with Retry-After.
+		// Handle 429 rate limit with Retry-After and adaptive backoff.
 		if resp.StatusCode == http.StatusTooManyRequests {
+			c.adaptiveDecrease()
 			retryAfter := parseRetryAfter(resp.Header.Get("Retry-After"))
 			if retryAfter > 0 {
 				select {
@@ -240,6 +301,9 @@ func (c *RESTClient) do(ctx context.Context, method, path string, body interface
 			lastErr = fmt.Errorf("rate limited (429)")
 			continue
 		}
+
+		// On success, slowly recover adaptive rate.
+		c.adaptiveIncrease()
 
 		// Retry on server errors.
 		if resp.StatusCode >= 500 {
@@ -259,7 +323,7 @@ func (c *RESTClient) do(ctx context.Context, method, path string, body interface
 			HTTPResp:   resp,
 		}
 
-		// Parse JSON body if present.
+		// Parse JSON body lazily — only populate Body if needed.
 		if len(respBody) > 0 {
 			var parsed map[string]interface{}
 			if json.Unmarshal(respBody, &parsed) == nil {
@@ -271,6 +335,30 @@ func (c *RESTClient) do(ctx context.Context, method, path string, body interface
 	}
 
 	return nil, fmt.Errorf("max retries exceeded: %w", lastErr)
+}
+
+// adaptiveDecrease halves the rate on 429 (AIMD multiplicative decrease).
+func (c *RESTClient) adaptiveDecrease() {
+	if c.adaptiveInitial <= 0 {
+		return
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.adaptiveRate = math.Max(c.adaptiveRate/2, 0.5) // floor at 0.5 req/s
+	c.rateLimit = c.adaptiveRate
+}
+
+// adaptiveIncrease slowly recovers toward the initial rate (AIMD additive increase).
+func (c *RESTClient) adaptiveIncrease() {
+	if c.adaptiveInitial <= 0 {
+		return
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.adaptiveRate < c.adaptiveInitial {
+		c.adaptiveRate = math.Min(c.adaptiveRate+0.5, c.adaptiveInitial)
+		c.rateLimit = c.adaptiveRate
+	}
 }
 
 // applyAuth adds authentication headers to the request.
@@ -325,6 +413,45 @@ func parseRetryAfter(val string) time.Duration {
 	return 0
 }
 
+// StreamPages processes pages one at a time via a callback, avoiding unbounded
+// slice accumulation. This is the preferred method for paginated reads.
+func (c *RESTClient) StreamPages(ctx context.Context, paginator Paginator, handler func(page map[string]interface{}) error) error {
+	var lastResp *http.Response
+
+	nextURL, hasMore := paginator.NextPage(lastResp, nil)
+	for hasMore {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
+		path := nextURL
+		if strings.HasPrefix(nextURL, "http://") || strings.HasPrefix(nextURL, "https://") {
+			path = strings.TrimPrefix(nextURL, c.baseURL)
+		}
+
+		resp, err := c.do(ctx, http.MethodGet, path, nil)
+		if err != nil {
+			return fmt.Errorf("fetch page: %w", err)
+		}
+
+		if resp.Body != nil {
+			if err := handler(resp.Body); err != nil {
+				return fmt.Errorf("page handler: %w", err)
+			}
+		}
+
+		lastResp = resp.HTTPResp
+		nextURL, hasMore = paginator.NextPage(lastResp, resp.Body)
+	}
+
+	return nil
+}
+
+// Deprecated: FetchAllPages accumulates all pages in memory. Use StreamPages
+// for large datasets to avoid unbounded memory growth.
+//
 // FetchAllPages retrieves all pages of a paginated endpoint using the given
 // Paginator strategy. It collects all response bodies into a slice.
 func (c *RESTClient) FetchAllPages(ctx context.Context, paginator Paginator) ([]map[string]interface{}, error) {

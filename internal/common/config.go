@@ -55,6 +55,10 @@ type Config struct {
 	MCPGatewayPort int
 	MCPTransports  string // "sse,websocket"
 
+	// Neon (tenant database isolation)
+	NeonAPIKey string
+	NeonRegion string // e.g., "aws-us-east-1"
+
 	// Encryption
 	EncryptionKey string
 
@@ -98,6 +102,8 @@ func LoadConfig() *Config {
 		VaultToken:          envStr("VAULT_TOKEN", ""),
 		MCPGatewayPort:      envInt("MCP_GATEWAY_PORT", 8090),
 		MCPTransports:       envStr("MCP_GATEWAY_TRANSPORT", "sse,websocket"),
+		NeonAPIKey:          envStr("NEON_API_KEY", ""),
+		NeonRegion:          envStr("NEON_REGION", "aws-us-east-1"),
 		EncryptionKey:       envStr("FLOWFORGE_ENCRYPTION_KEY", ""),
 		WorkerConcurrency:   envInt("FLOWFORGE_WORKER_CONCURRENCY", 100),
 		BatchSize:           envInt("FLOWFORGE_BATCH_SIZE", 1000),

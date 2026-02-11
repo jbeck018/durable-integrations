@@ -40,6 +40,9 @@ jobs:
       - name: Install TypeScript proto plugins
         run: cd packages/proto-ts && npm install
 
+      - name: Update buf dependencies
+        run: buf dep update
+
       - name: Lint proto files
         run: buf lint
 

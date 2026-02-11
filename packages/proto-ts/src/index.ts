@@ -19,5 +19,4 @@
 // Re-export all generated types and services.
 // These paths are populated by `buf generate` and should not be manually edited.
 export * from "./gen/flowforge/api/v1/api_pb.js";
-export * from "./gen/flowforge/api/v1/api_connect.js";
 export * from "./gen/flowforge/protocol/protocol_pb.js";

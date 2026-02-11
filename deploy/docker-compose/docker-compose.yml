@@ -1,0 +1,457 @@
+version: "3.9"
+
+x-flowforge-common: &flowforge-common
+  restart: unless-stopped
+  env_file:
+    - .env
+  networks:
+    - flowforge
+
+services:
+  # ===========================================================================
+  # FlowForge Application Services
+  # ===========================================================================
+
+  flowforge-api:
+    <<: *flowforge-common
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      target: api
+    image: flowforge-api:latest
+    container_name: flowforge-api
+    ports:
+      - "${FLOWFORGE_API_PORT:-8080}:8080"
+      - "${FLOWFORGE_GRPC_PORT:-9090}:9090"
+    environment:
+      FLOWFORGE_SERVICE_NAME: flowforge-api
+      FLOWFORGE_ENV: development
+      FLOWFORGE_LOG_LEVEL: "${FLOWFORGE_LOG_LEVEL:-debug}"
+      FLOWFORGE_API_PORT: "8080"
+      FLOWFORGE_GRPC_PORT: "9090"
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: "${POSTGRES_USER:-flowforge}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-flowforge_dev_password}"
+      POSTGRES_DB: "${POSTGRES_DB:-flowforge}"
+      POSTGRES_SSL_MODE: disable
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-}"
+      TEMPORAL_HOST: temporal
+      TEMPORAL_PORT: "7233"
+      TEMPORAL_NAMESPACE: "${TEMPORAL_NAMESPACE:-flowforge}"
+      S3_ENDPOINT: "http://minio:9000"
+      S3_BUCKET: "${S3_BUCKET:-flowforge-staging}"
+      S3_REGION: "${S3_REGION:-us-east-1}"
+      S3_ACCESS_KEY: "${MINIO_ROOT_USER:-flowforge}"
+      S3_SECRET_KEY: "${MINIO_ROOT_PASSWORD:-flowforge_dev_secret}"
+      VAULT_ADDR: "http://vault:8200"
+      VAULT_TOKEN: "${VAULT_DEV_ROOT_TOKEN:-flowforge-dev-token}"
+      FLOWFORGE_ENCRYPTION_KEY: "${FLOWFORGE_ENCRYPTION_KEY:-0123456789abcdef0123456789abcdef}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      temporal:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      vault:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/flowforge-api", "healthcheck"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+
+  flowforge-worker:
+    <<: *flowforge-common
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      target: worker
+    image: flowforge-worker:latest
+    container_name: flowforge-worker
+    environment:
+      FLOWFORGE_SERVICE_NAME: flowforge-worker
+      FLOWFORGE_ENV: development
+      FLOWFORGE_LOG_LEVEL: "${FLOWFORGE_LOG_LEVEL:-debug}"
+      FLOWFORGE_WORKER_CONCURRENCY: "${FLOWFORGE_WORKER_CONCURRENCY:-100}"
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: "${POSTGRES_USER:-flowforge}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-flowforge_dev_password}"
+      POSTGRES_DB: "${POSTGRES_DB:-flowforge}"
+      POSTGRES_SSL_MODE: disable
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-}"
+      TEMPORAL_HOST: temporal
+      TEMPORAL_PORT: "7233"
+      TEMPORAL_NAMESPACE: "${TEMPORAL_NAMESPACE:-flowforge}"
+      S3_ENDPOINT: "http://minio:9000"
+      S3_BUCKET: "${S3_BUCKET:-flowforge-staging}"
+      S3_REGION: "${S3_REGION:-us-east-1}"
+      S3_ACCESS_KEY: "${MINIO_ROOT_USER:-flowforge}"
+      S3_SECRET_KEY: "${MINIO_ROOT_PASSWORD:-flowforge_dev_secret}"
+      VAULT_ADDR: "http://vault:8200"
+      VAULT_TOKEN: "${VAULT_DEV_ROOT_TOKEN:-flowforge-dev-token}"
+      FLOWFORGE_ENCRYPTION_KEY: "${FLOWFORGE_ENCRYPTION_KEY:-0123456789abcdef0123456789abcdef}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      temporal:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      vault:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/flowforge-worker", "healthcheck"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 256M
+
+  flowforge-mcp-gateway:
+    <<: *flowforge-common
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      target: mcp-gateway
+    image: flowforge-mcp-gateway:latest
+    container_name: flowforge-mcp-gateway
+    ports:
+      - "${MCP_GATEWAY_PORT:-8090}:8090"
+    environment:
+      FLOWFORGE_SERVICE_NAME: flowforge-mcp-gateway
+      FLOWFORGE_ENV: development
+      FLOWFORGE_LOG_LEVEL: "${FLOWFORGE_LOG_LEVEL:-debug}"
+      MCP_GATEWAY_PORT: "8090"
+      MCP_GATEWAY_TRANSPORT: "${MCP_GATEWAY_TRANSPORT:-sse,websocket}"
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: "${POSTGRES_USER:-flowforge}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-flowforge_dev_password}"
+      POSTGRES_DB: "${POSTGRES_DB:-flowforge}"
+      POSTGRES_SSL_MODE: disable
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-}"
+      TEMPORAL_HOST: temporal
+      TEMPORAL_PORT: "7233"
+      TEMPORAL_NAMESPACE: "${TEMPORAL_NAMESPACE:-flowforge}"
+      VAULT_ADDR: "http://vault:8200"
+      VAULT_TOKEN: "${VAULT_DEV_ROOT_TOKEN:-flowforge-dev-token}"
+      FLOWFORGE_ENCRYPTION_KEY: "${FLOWFORGE_ENCRYPTION_KEY:-0123456789abcdef0123456789abcdef}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      temporal:
+        condition: service_healthy
+      vault:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/flowforge-mcp-gateway", "healthcheck"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+
+  # ===========================================================================
+  # Infrastructure Services
+  # ===========================================================================
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: flowforge-postgres
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: "${POSTGRES_USER:-flowforge}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-flowforge_dev_password}"
+      POSTGRES_DB: "${POSTGRES_DB:-flowforge}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - flowforge
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-flowforge} -d ${POSTGRES_DB:-flowforge}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+
+  redis:
+    image: redis:7-alpine
+    container_name: flowforge-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    command: >
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --appendonly yes
+      --appendfsync everysec
+    volumes:
+      - redis_data:/data
+    networks:
+      - flowforge
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 300M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
+
+  temporal:
+    image: temporalio/auto-setup:1.24
+    container_name: flowforge-temporal
+    restart: unless-stopped
+    ports:
+      - "${TEMPORAL_PORT:-7233}:7233"
+    environment:
+      DB: postgresql
+      DB_PORT: "5432"
+      POSTGRES_USER: "${POSTGRES_USER:-flowforge}"
+      POSTGRES_PWD: "${POSTGRES_PASSWORD:-flowforge_dev_password}"
+      POSTGRES_SEEDS: postgres
+      DYNAMIC_CONFIG_FILE_PATH: config/dynamicconfig/development-sql.yaml
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - flowforge
+    healthcheck:
+      test: ["CMD", "tctl", "--address", "temporal:7233", "cluster", "health"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+
+  temporal-ui:
+    image: temporalio/ui:2.31.2
+    container_name: flowforge-temporal-ui
+    restart: unless-stopped
+    ports:
+      - "${TEMPORAL_UI_PORT:-8088}:8080"
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: "http://localhost:3000"
+    depends_on:
+      temporal:
+        condition: service_healthy
+    networks:
+      - flowforge
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+  minio:
+    image: minio/minio:RELEASE.2024-06-13T22-53-53Z
+    container_name: flowforge-minio
+    restart: unless-stopped
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    environment:
+      MINIO_ROOT_USER: "${MINIO_ROOT_USER:-flowforge}"
+      MINIO_ROOT_PASSWORD: "${MINIO_ROOT_PASSWORD:-flowforge_dev_secret}"
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - flowforge
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
+
+  vault:
+    image: hashicorp/vault:1.17
+    container_name: flowforge-vault
+    restart: unless-stopped
+    ports:
+      - "${VAULT_PORT:-8200}:8200"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: "${VAULT_DEV_ROOT_TOKEN:-flowforge-dev-token}"
+      VAULT_DEV_LISTEN_ADDRESS: "0.0.0.0:8200"
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - vault_data:/vault/data
+    networks:
+      - flowforge
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
+
+  # ===========================================================================
+  # Observability
+  # ===========================================================================
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: flowforge-prometheus
+    restart: unless-stopped
+    ports:
+      - "${PROMETHEUS_PORT:-9091}:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.enable-lifecycle"
+    networks:
+      - flowforge
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: flowforge-grafana
+    restart: unless-stopped
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: "${GRAFANA_ADMIN_USER:-admin}"
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:-admin}"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: "http://localhost:${GRAFANA_PORT:-3000}"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    networks:
+      - flowforge
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local
+  vault_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  flowforge:
+    driver: bridge
+    name: flowforge-network

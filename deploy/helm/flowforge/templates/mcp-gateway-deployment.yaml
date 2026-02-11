@@ -1,0 +1,146 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "flowforge.fullname" . }}-mcp-gateway
+  labels:
+    {{- include "flowforge.componentLabels" (dict "context" . "component" "mcp-gateway") | nindent 4 }}
+spec:
+  {{- if not .Values.mcpGateway.autoscaling.enabled }}
+  replicas: {{ .Values.mcpGateway.replicas }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "flowforge.componentSelectorLabels" (dict "context" . "component" "mcp-gateway") | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- with .Values.mcpGateway.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "flowforge.componentSelectorLabels" (dict "context" . "component" "mcp-gateway") | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "flowforge.serviceAccountName" . }}
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        fsGroup: 65534
+      containers:
+        - name: mcp-gateway
+          image: {{ include "flowforge.image" (dict "registry" .Values.global.imageRegistry "image" .Values.mcpGateway.image) }}
+          imagePullPolicy: {{ .Values.mcpGateway.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8090
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "flowforge.fullname" . }}-config
+            - secretRef:
+                name: {{ include "flowforge.fullname" . }}-secret
+          env:
+            - name: FLOWFORGE_SERVICE_NAME
+              value: flowforge-mcp-gateway
+            - name: MCP_GATEWAY_PORT
+              value: "8090"
+            - name: MCP_GATEWAY_TRANSPORT
+              value: {{ .Values.mcpGateway.transports | quote }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.mcpGateway.resources | nindent 12 }}
+      {{- with .Values.mcpGateway.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.mcpGateway.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.mcpGateway.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "flowforge.fullname" . }}-mcp-gateway
+  labels:
+    {{- include "flowforge.componentLabels" (dict "context" . "component" "mcp-gateway") | nindent 4 }}
+spec:
+  type: {{ .Values.mcpGateway.service.type }}
+  ports:
+    - port: {{ .Values.mcpGateway.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "flowforge.componentSelectorLabels" (dict "context" . "component" "mcp-gateway") | nindent 4 }}
+{{- if .Values.mcpGateway.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "flowforge.fullname" . }}-mcp-gateway
+  labels:
+    {{- include "flowforge.componentLabels" (dict "context" . "component" "mcp-gateway") | nindent 4 }}
+  {{- with .Values.mcpGateway.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.mcpGateway.ingress.className }}
+  ingressClassName: {{ .Values.mcpGateway.ingress.className }}
+  {{- end }}
+  {{- if .Values.mcpGateway.ingress.tls }}
+  tls:
+    {{- range .Values.mcpGateway.ingress.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- range .Values.mcpGateway.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ include "flowforge.fullname" $ }}-mcp-gateway
+                port:
+                  name: http
+          {{- end }}
+    {{- end }}
+{{- end }}

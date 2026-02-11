@@ -1,0 +1,175 @@
+syntax = "proto3";
+
+package flowforge.protocol;
+
+option go_package = "github.com/flowforge/flowforge/proto/flowforge/protocol";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+
+// Message is the envelope for all protocol communication.
+message Message {
+  MessageType type = 1;
+  oneof payload {
+    Record record = 2;
+    State state = 3;
+    SchemaMessage schema = 4;
+    Log log = 5;
+    Control control = 6;
+    Spec spec = 7;
+    MCPToolCall mcp_tool_call = 8;
+    MCPToolResult mcp_tool_result = 9;
+  }
+}
+
+enum MessageType {
+  MESSAGE_TYPE_UNSPECIFIED = 0;
+  MESSAGE_TYPE_SPEC = 1;
+  MESSAGE_TYPE_CHECK = 2;
+  MESSAGE_TYPE_DISCOVER = 3;
+  MESSAGE_TYPE_READ = 4;
+  MESSAGE_TYPE_WRITE = 5;
+  MESSAGE_TYPE_RECORD = 6;
+  MESSAGE_TYPE_STATE = 7;
+  MESSAGE_TYPE_SCHEMA = 8;
+  MESSAGE_TYPE_LOG = 9;
+  MESSAGE_TYPE_CONTROL = 10;
+  MESSAGE_TYPE_MCP_TOOL_CALL = 11;
+  MESSAGE_TYPE_MCP_TOOL_RESULT = 12;
+}
+
+message Record {
+  string stream = 1;
+  string namespace = 2;
+  google.protobuf.Struct data = 3;
+  google.protobuf.Timestamp emitted_at = 4;
+}
+
+message State {
+  StateType type = 1;
+  string stream = 2;
+  google.protobuf.Struct data = 3;
+}
+
+enum StateType {
+  STATE_TYPE_UNSPECIFIED = 0;
+  STATE_TYPE_STREAM = 1;
+  STATE_TYPE_GLOBAL = 2;
+}
+
+message SchemaMessage {
+  string stream = 1;
+  google.protobuf.Struct schema = 2;
+  SchemaChange change = 3;
+}
+
+enum SchemaChange {
+  SCHEMA_CHANGE_UNSPECIFIED = 0;
+  SCHEMA_CHANGE_NEW_COLUMN = 1;
+  SCHEMA_CHANGE_REMOVED_COLUMN = 2;
+  SCHEMA_CHANGE_TYPE_CHANGE = 3;
+}
+
+message Log {
+  LogLevel level = 1;
+  string message = 2;
+  google.protobuf.Timestamp timestamp = 3;
+  google.protobuf.Struct data = 4;
+}
+
+enum LogLevel {
+  LOG_LEVEL_UNSPECIFIED = 0;
+  LOG_LEVEL_DEBUG = 1;
+  LOG_LEVEL_INFO = 2;
+  LOG_LEVEL_WARN = 3;
+  LOG_LEVEL_ERROR = 4;
+}
+
+message Control {
+  ControlType type = 1;
+  string message = 2;
+  google.protobuf.Struct data = 3;
+}
+
+enum ControlType {
+  CONTROL_TYPE_UNSPECIFIED = 0;
+  CONTROL_TYPE_RATE_LIMIT = 1;
+  CONTROL_TYPE_BACKPRESSURE = 2;
+  CONTROL_TYPE_PAUSE = 3;
+  CONTROL_TYPE_RESUME = 4;
+}
+
+message Spec {
+  string documentation_url = 1;
+  google.protobuf.Struct config_schema = 2;
+}
+
+message MCPToolCall {
+  string id = 1;
+  string tool = 2;
+  google.protobuf.Struct parameters = 3;
+  string agent_id = 4;
+  string tenant_id = 5;
+}
+
+message MCPToolResult {
+  string call_id = 1;
+  google.protobuf.Struct content = 2;
+  bool is_error = 3;
+}
+
+message Stream {
+  string name = 1;
+  string namespace = 2;
+  string display_name = 3;
+  google.protobuf.Struct json_schema = 4;
+  repeated SyncMode supported_sync_modes = 5;
+  repeated string default_cursor_field = 6;
+  bool source_defined_primary_key = 7;
+  repeated PrimaryKeyPart primary_key = 8;
+}
+
+message PrimaryKeyPart {
+  repeated string fields = 1;
+}
+
+enum SyncMode {
+  SYNC_MODE_UNSPECIFIED = 0;
+  SYNC_MODE_FULL_REFRESH = 1;
+  SYNC_MODE_INCREMENTAL = 2;
+}
+
+enum DestinationSyncMode {
+  DESTINATION_SYNC_MODE_UNSPECIFIED = 0;
+  DESTINATION_SYNC_MODE_APPEND = 1;
+  DESTINATION_SYNC_MODE_UPSERT = 2;
+  DESTINATION_SYNC_MODE_MERGE = 3;
+  DESTINATION_SYNC_MODE_SOFT_DELETE = 4;
+}
+
+message Catalog {
+  repeated Stream streams = 1;
+}
+
+message ConfiguredStream {
+  Stream stream = 1;
+  SyncMode sync_mode = 2;
+  DestinationSyncMode destination_sync_mode = 3;
+  repeated string cursor_field = 4;
+  repeated PrimaryKeyPart primary_key = 5;
+}
+
+message ConfiguredCatalog {
+  repeated ConfiguredStream streams = 1;
+}
+
+message CheckResult {
+  CheckStatus status = 1;
+  string message = 2;
+}
+
+enum CheckStatus {
+  CHECK_STATUS_UNSPECIFIED = 0;
+  CHECK_STATUS_SUCCEEDED = 1;
+  CHECK_STATUS_FAILED = 2;
+}

@@ -1,0 +1,205 @@
+# =============================================================================
+# FlowForge Helm Chart Values
+# =============================================================================
+
+global:
+  domain: flowforge.local
+  imageRegistry: ""
+  imagePullSecrets: []
+  tls:
+    enabled: false
+    secretName: flowforge-tls
+
+# ---------------------------------------------------------------------------
+# API Server
+# ---------------------------------------------------------------------------
+api:
+  replicas: 2
+  image:
+    repository: flowforge-api
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8080
+    grpcPort: 9090
+    metricsPort: 8080
+  ingress:
+    enabled: false
+    className: nginx
+    annotations: {}
+    hosts:
+      - host: api.flowforge.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  podAnnotations: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# ---------------------------------------------------------------------------
+# Worker
+# ---------------------------------------------------------------------------
+worker:
+  replicas: 2
+  image:
+    repository: flowforge-worker
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    metricsPort: 9091
+  resources:
+    requests:
+      cpu: 500m
+      memory: 512Mi
+    limits:
+      cpu: "2"
+      memory: 1Gi
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 20
+    targetCPUUtilizationPercentage: 60
+    targetMemoryUtilizationPercentage: 75
+  concurrency: 100
+  batchSize: 1000
+  podAnnotations: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# ---------------------------------------------------------------------------
+# MCP Gateway
+# ---------------------------------------------------------------------------
+mcpGateway:
+  replicas: 2
+  image:
+    repository: flowforge-mcp-gateway
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8090
+    metricsPort: 8090
+  ingress:
+    enabled: false
+    className: nginx
+    annotations: {}
+    hosts:
+      - host: mcp.flowforge.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  transports: "sse,websocket"
+  podAnnotations: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# ---------------------------------------------------------------------------
+# PostgreSQL
+# ---------------------------------------------------------------------------
+postgresql:
+  internal: true
+  host: ""
+  port: 5432
+  user: flowforge
+  password: flowforge
+  database: flowforge
+  sslMode: disable
+  maxConnections: 20
+
+# ---------------------------------------------------------------------------
+# Redis
+# ---------------------------------------------------------------------------
+redis:
+  internal: true
+  host: ""
+  port: 6379
+  password: ""
+  db: 0
+
+# ---------------------------------------------------------------------------
+# Temporal
+# ---------------------------------------------------------------------------
+temporal:
+  host: temporal-frontend
+  port: 7233
+  namespace: flowforge
+
+# ---------------------------------------------------------------------------
+# MinIO / S3
+# ---------------------------------------------------------------------------
+minio:
+  endpoint: "http://minio:9000"
+  bucket: flowforge-staging
+  region: us-east-1
+  accessKey: flowforge
+  secretKey: flowforge
+
+# ---------------------------------------------------------------------------
+# HashiCorp Vault
+# ---------------------------------------------------------------------------
+vault:
+  address: "http://vault:8200"
+  token: ""
+
+# ---------------------------------------------------------------------------
+# Security
+# ---------------------------------------------------------------------------
+encryptionKey: ""
+
+# ---------------------------------------------------------------------------
+# Monitoring
+# ---------------------------------------------------------------------------
+monitoring:
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: false
+      interval: 15s
+      labels: {}
+  grafana:
+    enabled: false
+    dashboards:
+      enabled: true
+
+# ---------------------------------------------------------------------------
+# Common
+# ---------------------------------------------------------------------------
+env: production
+logLevel: info
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}

@@ -11,7 +11,7 @@
 # Stage: builder
 # Compiles all Go binaries with static linking for scratch/distroless targets.
 # ---------------------------------------------------------------------------
-FROM golang:1.22-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 RUN apk add --no-cache ca-certificates git tzdata
 
